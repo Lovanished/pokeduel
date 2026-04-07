@@ -137,6 +137,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .zone.fz{border-color:rgba(60,140,60,.25)}
 .zone.pulse{border-color:var(--gold)!important;box-shadow:0 0 12px rgba(201,168,76,.6)!important;animation:zpulse .7s ease-in-out infinite}
 .zone.atk-target{border-color:#ff3366!important;box-shadow:0 0 12px rgba(255,51,102,.5)!important;animation:zpulse .5s ease-in-out infinite}
+.zone.trap-ready{border-color:#cc44aa!important;box-shadow:0 0 10px rgba(204,68,170,.5)!important;animation:zpulse .9s ease-in-out infinite}
 @keyframes zpulse{0%,100%{opacity:1}50%{opacity:.6}}
 .zone-cnt{position:absolute;bottom:2px;right:2px;background:rgba(0,0,0,.75);color:var(--gold);font-size:.58rem;padding:1px 3px;border-radius:1px;font-family:var(--cinzel);pointer-events:none}
 
@@ -168,6 +169,20 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .log-special{color:var(--gold)}.log-danger{color:#ff7788}.log-enemy{color:#ff9999}.log-phase{color:var(--muted)}
 .action-btns{display:flex;gap:.4rem;flex-wrap:wrap}
 
+/* Trap activation prompt banner */
+.trap-prompt{
+  position:fixed;top:0;left:0;right:0;z-index:7000;
+  background:linear-gradient(90deg,rgba(8,8,16,.95),rgba(138,10,90,.3),rgba(8,8,16,.95));
+  border-bottom:1px solid rgba(204,68,170,.6);
+  padding:.5rem 1rem;display:flex;align-items:center;justify-content:center;gap:.8rem;
+  font-family:var(--cinzel);font-size:.8rem;color:#cc44aa;letter-spacing:.06em;
+  animation:trapBanner .4s ease;
+}
+@keyframes trapBanner{from{transform:translateY(-100%)}to{transform:translateY(0)}}
+.trap-prompt-btn{padding:.3rem .7rem;font-family:var(--cinzel);font-size:.72rem;cursor:pointer;border-radius:2px;border:1px solid;transition:all .15s}
+.trap-activate-btn{border-color:#cc44aa;color:#cc44aa;background:rgba(138,10,90,.2)}.trap-activate-btn:hover{background:rgba(138,10,90,.4)}
+.trap-pass-btn{border-color:var(--border2);color:var(--muted);background:transparent}.trap-pass-btn:hover{border-color:var(--muted)}
+
 /* Side zone specific */
 .deck-zone-vis{background:linear-gradient(135deg,#1a1a3a,#0c0c20)}
 .gy-zone-vis{background:linear-gradient(135deg,#2a1a1a,#1a0c0c)}
@@ -189,7 +204,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 /* ══════════════════════════════════════════
    CONTEXT MENU
 ══════════════════════════════════════════ */
-.ctxmenu{position:fixed;z-index:9500;background:var(--bg2);border:1px solid var(--gold);border-radius:3px;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,.8);min-width:150px}
+.ctxmenu{position:fixed;z-index:9500;background:var(--bg2);border:1px solid var(--gold);border-radius:3px;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,.8);min-width:160px}
 .ctxmenu-item{padding:.45rem .9rem;font-family:var(--cinzel);font-size:.78rem;color:var(--text);cursor:pointer;letter-spacing:.04em;border-bottom:1px solid var(--border);transition:all .15s}
 .ctxmenu-item:last-child{border-bottom:none}
 .ctxmenu-item:hover{background:rgba(201,168,76,.08);color:var(--gold)}
@@ -254,7 +269,10 @@ const App = {
   modal: null,
   logs: [],
   // duel ui state
+  // ─── [FIX] attackingZone도 zoneIdx 외에 playerIdx 포함
   ui: { selectedHand: null, attackingZone: null },
+  // ─── [NEW] 함정 발동 대기 큐
+  trapQueue: null, // { trapZoneIdx, trapFC, card, onActivate, onPass }
 };
 
 // ══════════════════════════════════════════
@@ -275,7 +293,7 @@ function newPlayerState(name, deckIds, isAI) {
 }
 
 function startDuel(playerDeckIds) {
-  const d = App.duel = {
+  const dv = App.duel = {
     turn:1, activePlayer:0, phase:'MAIN1',
     normalSummonDone:false, attackedUIDs: new Set(),
     players:[ newPlayerState('YOU', playerDeckIds, false), newPlayerState('AI', buildAIDeck(), true) ]
@@ -283,9 +301,8 @@ function startDuel(playerDeckIds) {
   App.result = null;
   App.logs = [];
   App.ui = { selectedHand:null, attackingZone:null };
-  // Initial hand
+  App.trapQueue = null;
   doDrawCard(0,5); doDrawCard(1,5);
-  // Enable monster attacks for turn start (will be cleared on turn 1 Main1)
   addLog('듀얼 시작! 선공: YOU', 'special');
   App.screen = 'duel';
   render();
@@ -361,11 +378,9 @@ function onPhaseStart() {
   }
   if(dv.phase==='MAIN1'){
     dv.normalSummonDone=false;
-    // Allow monsters summoned BEFORE this turn to attack
     activeP().monsterZones.forEach(z=>{ if(z) z.canAttack=z.summonedThisTurn?false:true; });
   }
   if(dv.phase==='BATTLE'){
-    // Allow attacking for monsters that were NOT summoned this turn
     activeP().monsterZones.forEach(z=>{ if(z) z.canAttack=!z.summonedThisTurn; });
   }
   if(dv.phase==='END'){
@@ -381,7 +396,6 @@ function onPhaseStart() {
 
 function endTurn() {
   const dv = d();
-  // Clear summonedThisTurn flags
   activeP().monsterZones.forEach(z=>{ if(z){ z.summonedThisTurn=false; z.attacked=false; z.canAttack=false; }});
   dv.activePlayer = 1-dv.activePlayer;
   dv.turn++;
@@ -399,19 +413,20 @@ function endDuel(winnerIdx) {
 // ══════════════════════════════════════════
 function normalSummon(handIdx, zoneIdx, position='ATK') {
   const dv=d();
-  if(dv.normalSummonDone){ addLog('이미 일반 소환했습니다!'); return; }
-  if(dv.phase!=='MAIN1'&&dv.phase!=='MAIN2'){ addLog('메인 페이즈에만 소환 가능합니다!'); return; }
+  if(dv.normalSummonDone){ addLog('이미 일반 소환했습니다!'); render(); return; }
+  if(dv.phase!=='MAIN1'&&dv.phase!=='MAIN2'){ addLog('메인 페이즈에만 소환 가능합니다!'); render(); return; }
+  if(dv.activePlayer!==0){ addLog('자신의 턴이 아닙니다!'); render(); return; }
   const cardId=player().hand[handIdx];
   const card=CARDDB[cardId];
-  if(!card||!isMonster(card)||isExtraType(card)){ addLog('소환할 수 없는 카드입니다!'); return; }
-  if(player().monsterZones[zoneIdx]!==null){ addLog('그 존에 이미 몬스터가 있습니다!'); return; }
+  if(!card||!isMonster(card)||isExtraType(card)){ addLog('소환할 수 없는 카드입니다!'); render(); return; }
+  if(player().monsterZones[zoneIdx]!==null){ addLog('그 존에 이미 몬스터가 있습니다!'); render(); return; }
 
   const lv=card.level||0;
   let tributeNeeded = lv>=7?2:lv>=5?1:0;
 
   if(tributeNeeded>0){
     const existing=player().monsterZones.filter(z=>z!==null);
-    if(existing.length<tributeNeeded){ addLog(`릴리스 ${tributeNeeded}체 필요합니다!`); return; }
+    if(existing.length<tributeNeeded){ addLog(`릴리스 ${tributeNeeded}체 필요합니다! (보유: ${existing.length}체)`); render(); return; }
     let count=0;
     for(let i=0;i<5&&count<tributeNeeded;i++){
       if(player().monsterZones[i]){
@@ -426,62 +441,144 @@ function normalSummon(handIdx, zoneIdx, position='ATK') {
   player().monsterZones[zoneIdx]=fc;
   player().hand.splice(handIdx,1);
   dv.normalSummonDone=true;
+  App.ui.selectedHand=null;
   addLog(`${card.name} 소환! [${position}]`, 'special');
   fireEffects('on_summon', fc, 0);
   fireEffects('on_normal_summon', fc, 0);
+  render();
 }
 
 function setMonster(handIdx, zoneIdx) {
   const dv=d();
-  if(dv.normalSummonDone){ addLog('이미 일반 소환했습니다!'); return; }
+  if(dv.normalSummonDone){ addLog('이미 일반 소환했습니다!'); render(); return; }
+  if(dv.activePlayer!==0){ addLog('자신의 턴이 아닙니다!'); render(); return; }
   const cardId=player().hand[handIdx];
   const card=CARDDB[cardId];
-  if(!card||!isMonster(card)){ return; }
-  if((card.level||0)>=5){ addLog('레벨 5+ 몬스터는 세트 불가!'); return; }
-  if(player().monsterZones[zoneIdx]!==null){ addLog('그 존이 차있습니다!'); return; }
+  if(!card||!isMonster(card)){ render(); return; }
+  if((card.level||0)>=5){ addLog('레벨 5+ 몬스터는 세트 불가!'); render(); return; }
+  if(player().monsterZones[zoneIdx]!==null){ addLog('그 존이 차있습니다!'); render(); return; }
   const fc=createFieldCard(cardId,'DEF',false);
   fc.summonedThisTurn=true; fc.canAttack=false;
   player().monsterZones[zoneIdx]=fc;
   player().hand.splice(handIdx,1);
   dv.normalSummonDone=true;
+  App.ui.selectedHand=null;
   addLog(`몬스터 세트.`);
+  render();
 }
 
+// ─── [FIX] 마법/함정 발동: 효과 실패해도 무조건 묘지 가던 버그 수정
+// 마법: on_activate 효과 실행 후, 일반/속공만 묘지로
+// 함정: 세트만 하고, activateTrap()에서 실제 발동
 function activateSpellTrap(handIdx, zoneIdx) {
   const cardId=player().hand[handIdx];
   const card=CARDDB[cardId];
   if(!card||(card.type!=='spell'&&card.type!=='trap')){ return; }
   if(player().spellZones[zoneIdx]!==null){ addLog('그 마함존이 차있습니다!'); return; }
+
   const fc=createFieldCard(cardId,'ATK',true);
-  player().spellZones[zoneIdx]=fc;
-  player().hand.splice(handIdx,1);
+
   if(card.type==='spell'){
+    player().spellZones[zoneIdx]=fc;
+    player().hand.splice(handIdx,1);
     addLog(`${card.name} 발동!`, 'special');
     fireEffects('on_activate', fc, 0);
-    // 일반/속공 마법만 발동 즉시 묘지로
+    // 일반/속공 마법: 효과 처리 후 묘지로 (지속/장착/필드는 필드에 잔류)
     if(card.subtype==='normal'||card.subtype==='quickplay'){
       player().spellZones[zoneIdx]=null;
       player().graveyard.push(cardId);
     }
   } else {
-    // 함정은 항상 뒷면으로 세트 — 발동은 activateTrap()에서 처리
+    // 함정: 항상 뒷면 세트, 발동은 activateTrap()에서
     fc.faceUp=false;
+    player().spellZones[zoneIdx]=fc;
+    player().hand.splice(handIdx,1);
     addLog(`함정 카드 세트.`);
   }
 }
 
+// ─── [FIX] 함정 수동 발동 (플레이어 클릭 시 또는 트리거 응답 후)
 function activateTrap(zoneIdx) {
   const fc=player().spellZones[zoneIdx];
   if(!fc||fc.faceUp) return;
+  // 세트된 턴에는 발동 불가 (summonedThisTurn 대신 setThisTurn 플래그 사용)
+  if(fc.setThisTurn){ addLog('방금 세트된 함정은 발동할 수 없습니다!'); return; }
   const card=CARDDB[fc.cardId];
   if(!card||card.type!=='trap') return;
+
+  const dv=d();
+  // 발동 타이밍 체크: 배틀 페이즈나 상대 턴에서만 함정 발동 가능 (메인은 자기 턴도 가능)
   fc.faceUp=true;
   addLog(`${card.name} 발동!`, 'special');
   fireEffects('on_activate', fc, 0);
-  // 일반·카운터 함정은 발동 후 묘지로, 지속 함정은 필드에 잔류
+  // 일반/카운터 함정: 발동 후 묘지
   if(card.subtype==='normal'||card.subtype==='counter'){
     player().spellZones[zoneIdx]=null;
     player().graveyard.push(fc.cardId);
+  }
+  render();
+}
+
+// ─── [NEW] 공격 선언 시 상대방(플레이어) 세트 함정 트리거 확인
+// 상대(AI)가 공격할 때 플레이어 필드의 세트 함정을 체크
+function checkPlayerTrapsOnAttack(atkZoneIdx, defZoneIdx, callback) {
+  // 플레이어 턴이 아닐 때 (AI 공격 시) 함정 발동 기회 제공
+  const traps = player().spellZones
+    .map((fc, i) => ({ fc, i }))
+    .filter(({ fc }) => fc && !fc.faceUp); // 세트된 카드들
+
+  // quick_effect 트리거를 가진 함정만 필터
+  const activatable = traps.filter(({ fc }) => {
+    const card = CARDDB[fc.cardId];
+    return card && card.type === 'trap' && !fc.setThisTurn &&
+      (card.effects||[]).some(e => e.trigger === 'quick_effect' || e.trigger === 'on_activate');
+  });
+
+  if(activatable.length === 0){
+    callback(false); // 발동 가능한 함정 없음, 공격 계속
+    return;
+  }
+
+  // 함정 발동 여부 묻는 큐 설정
+  App.trapQueue = {
+    traps: activatable,
+    currentIdx: 0,
+    atkZoneIdx,
+    defZoneIdx,
+    callback,
+    activated: false,
+  };
+  render();
+}
+
+// 함정 발동 확인 응답
+function respondTrap(doActivate) {
+  const tq = App.trapQueue;
+  if(!tq) return;
+
+  if(doActivate){
+    const { fc, i } = tq.traps[tq.currentIdx];
+    const card = CARDDB[fc.cardId];
+    fc.faceUp = true;
+    addLog(`${card.name} 발동! (공격 반응)`, 'special');
+    fireEffects('on_activate', fc, 0);
+    if(card.subtype==='normal'||card.subtype==='counter'){
+      player().spellZones[i] = null;
+      player().graveyard.push(fc.cardId);
+    }
+    App.trapQueue = null;
+    // 함정 발동 후 공격을 계속할지 결정 (무효화 등)
+    tq.callback(true);
+  } else {
+    // 패스: 다음 함정으로 or 공격 진행
+    tq.currentIdx++;
+    if(tq.currentIdx >= tq.traps.length){
+      App.trapQueue = null;
+      tq.callback(false);
+    } else {
+      render();
+      return;
+    }
   }
   render();
 }
@@ -501,28 +598,38 @@ function sendToGY(pi, zone, idx) {
 // BATTLE
 // ══════════════════════════════════════════
 function declareAttack(atkZoneIdx, defZoneIdx) {
-  // defZoneIdx = -1 for direct
   const dv=d();
   if(dv.phase!=='BATTLE'){ addLog('배틀 페이즈에만 공격 가능합니다!'); return; }
   const atkFC=player().monsterZones[atkZoneIdx];
   if(!atkFC||!atkFC.canAttack||atkFC.attacked){ addLog('이 몬스터는 공격할 수 없습니다!'); return; }
+
+  // ─── [NEW] 공격 선언 시 상대 함정 체크
+  checkPlayerTrapsOnAttack(atkZoneIdx, defZoneIdx, (trapActivated) => {
+    // 함정이 "무효" 효과를 썼다면 공격 취소 가능하지만
+    // 기본적으로 함정 발동 후에도 공격은 진행 (negate 효과가 있는 경우 별도 처리)
+    resolveAttack(atkZoneIdx, defZoneIdx);
+  });
+}
+
+function resolveAttack(atkZoneIdx, defZoneIdx) {
+  const dv=d();
+  const atkFC=player().monsterZones[atkZoneIdx];
+  if(!atkFC){ render(); return; } // 함정으로 파괴됐을 수도
   const atkCard=CARDDB[atkFC.cardId];
   const atk=(atkCard?.atk||0)+(atkFC._atkBoost||0);
 
   if(defZoneIdx===-1){
-    // Direct attack
-    if(enemy().monsterZones.some(z=>z)){addLog('상대 몬스터가 있어 직접 공격 불가!'); return;}
+    if(enemy().monsterZones.some(z=>z)){addLog('상대 몬스터가 있어 직접 공격 불가!'); render(); return;}
     const dmg=atk;
     enemy().lp=Math.max(0,enemy().lp-dmg);
-    addLog(`${atkCard?.name} 직접 공격! 상대 -${dmg}`,  'special');
+    addLog(`${atkCard?.name} 직접 공격! 상대 -${dmg}`, 'special');
     showPopup(dmg,'enemy');
     atkFC.attacked=true; atkFC.canAttack=false;
     if(enemy().lp===0) { endDuel(0); return; }
   } else {
     const defFC=enemy().monsterZones[defZoneIdx];
-    if(!defFC){ addLog('대상 없음!'); return; }
+    if(!defFC){ addLog('대상 없음!'); render(); return; }
     const defCard=CARDDB[defFC.cardId];
-    // Flip face-down
     if(!defFC.faceUp){ defFC.faceUp=true; addLog(`${defCard?.name||'?'} 표측방어!`); }
 
     let defVal;
@@ -577,25 +684,8 @@ function fireEffects(trigger, fieldCard, playerIdx) {
     log:(msg,t)=>addLog(msg,t||'special'),
   };
   EffectEngine.checkAndFire(trigger, fieldCard, ctx);
-  // Check if opponent died
   if(d().players[0].lp<=0) endDuel(1);
   if(d().players[1].lp<=0) endDuel(0);
-}
-
-// Check continuous effects that should fire during field check
-function checkContinuousEffects() {
-  if(!d()) return;
-  for(let pi=0;pi<2;pi++){
-    const p=P(pi);
-    [...p.monsterZones,...p.spellZones].forEach(fc=>{
-      if(!fc||!fc.faceUp) return;
-      const card=CARDDB[fc.cardId];
-      if(!card||!card.effects) return;
-      card.effects.filter(e=>e.trigger==='continuous').forEach(eff=>{
-        // Only fire continuous effects once per turn pass (simplified)
-      });
-    });
-  }
 }
 
 // ══════════════════════════════════════════
@@ -610,6 +700,9 @@ function aiDoTurn() {
   if(ph==='MAIN2'){ setTimeout(nextPhase,300); return; }
   if(ph==='END'){
     while(enemy().hand.length>6) enemy().graveyard.push(enemy().hand.shift());
+    // 세트된 함정의 setThisTurn 플래그 해제
+    enemy().spellZones.forEach(fc=>{ if(fc) fc.setThisTurn=false; });
+    player().spellZones.forEach(fc=>{ if(fc) fc.setThisTurn=false; });
     setTimeout(nextPhase,300); return;
   }
 }
@@ -617,7 +710,6 @@ function aiDoTurn() {
 function aiMain() {
   const e=enemy();
   const dv=d();
-  // Play best monster from hand
   if(!dv.normalSummonDone){
     const available=e.hand.map((id,i)=>({id,i,card:CARDDB[id]}))
       .filter(({card})=>card&&isMonster(card)&&!isExtraType(card)&&(card.level||0)<=4)
@@ -637,7 +729,20 @@ function aiMain() {
       }
     }
   }
-  // Play a spell
+  // AI 함정 세트
+  const trapsToSet = e.hand.map((id,i)=>({id,i,card:CARDDB[id]})).filter(({card})=>card&&card.type==='trap');
+  if(trapsToSet.length>0){
+    const trap=trapsToSet[0];
+    const slot=e.spellZones.findIndex(z=>z===null);
+    if(slot>-1){
+      const fc=createFieldCard(trap.id,'ATK',false);
+      fc.faceUp=false; fc.setThisTurn=true; // 이번 턴 세트 = 발동 불가
+      e.spellZones[slot]=fc;
+      e.hand.splice(trap.i,1);
+      addLog(`AI: 카드 세트.`,'enemy');
+    }
+  }
+  // AI 마법 발동
   const spells=e.hand.map((id,i)=>({id,i,card:CARDDB[id]})).filter(({card})=>card&&isSpell(card));
   if(spells.length>0){
     const sp=spells[0];
@@ -667,14 +772,12 @@ function aiBattle() {
     const atk=(atkCard?.atk||0)+(atkFC._atkBoost||0);
     const targets=player().monsterZones.map((z,i)=>({z,i})).filter(({z})=>z);
     if(targets.length===0){
-      // Direct
       player().lp=Math.max(0,player().lp-atk);
       addLog(`AI: ${atkCard?.name} 직접 공격! -${atk}`,'danger');
       showPopup(atk,'player');
       atkFC.attacked=true; atkFC.canAttack=false;
       if(player().lp===0){ endDuel(1); return; }
     } else {
-      // Attack weakest
       const target=targets.sort((a,b)=>{
         const av=a.z.position==='ATK'?(CARDDB[a.z.cardId]?.atk||0):(CARDDB[a.z.cardId]?.def||0);
         const bv=b.z.position==='ATK'?(CARDDB[b.z.cardId]?.atk||0):(CARDDB[b.z.cardId]?.def||0);
@@ -764,16 +867,14 @@ function renderDeckBuilder() {
   });
 
   const deck=S.currentDeck;
-  const mainCards=deck.main; // [{id,qty}]
+  const mainCards=deck.main;
   const extraCards=deck.extra;
   const mainTotal=mainCards.reduce((s,x)=>s+x.qty,0);
   const extraTotal=extraCards.reduce((s,x)=>s+x.qty,0);
   const restrictions=getRestrictions();
-
   const savedDecks=Object.keys(DB.getDecks());
 
   return `<div class="deckbuilder">
-    <!-- HEADER -->
     <div class="db-header">
       <div style="display:flex;align-items:center;gap:.8rem">
         <button class="btn btn-outline btn-sm" onclick="goTo('title')">← 뒤로</button>
@@ -785,8 +886,6 @@ function renderDeckBuilder() {
         <button class="btn btn-gold btn-sm" onclick="startDuelWithDeck()">듀얼 시작!</button>
       </div>
     </div>
-
-    <!-- CARD POOL -->
     <div class="card-pool">
       <div class="pool-toolbar">
         <input class="pool-search" placeholder="카드 이름/효과 검색..."
@@ -803,8 +902,6 @@ function renderDeckBuilder() {
         ${filtered.length===0?'<div style="color:var(--muted);font-size:.8rem;grid-column:1/-1;text-align:center;padding:2rem">검색 결과 없음</div>':''}
       </div>
     </div>
-
-    <!-- DECK PANEL -->
     <div class="deck-panel">
       <div class="deck-tabs">
         ${[{id:'main',label:`메인 (${mainTotal})`},{id:'extra',label:`엑스트라 (${extraTotal})`}].map(t=>`
@@ -861,7 +958,6 @@ function renderPoolCard(card, deck, restrictions) {
   const inDeckEntry=allEntries.find(x=>x.id===card.id);
   const inDeckQty=inDeckEntry?.qty||0;
   const forbidden=maxCopy===0;
-  const isExtra=isExtraType(card);
   return `<div class="pool-card ${forbidden?'':'cursor-pointer'}"
     style="opacity:${forbidden?.5:1}"
     onclick="${forbidden?'':'addCardFromPool(\''+card.id+'\')'}"
@@ -893,7 +989,7 @@ function addDeckCard(cardId, tab='main') {
   const list=tab==='main'?deck.main:deck.extra;
   const maxItems=tab==='main'?60:15;
   const total=list.reduce((s,x)=>s+x.qty,0);
-  if(total>=maxItems){ addLog(`${tab==='main'?'메인':'엑스트라'} 덱이 가득 찼습니다!`); renderToast('덱이 가득 찼습니다!','error'); return; }
+  if(total>=maxItems){ renderToast('덱이 가득 찼습니다!','error'); return; }
   const max=maxCopies(cardId);
   if(max===0){ renderToast('금지 카드입니다!','error'); return; }
   const existing=list.find(x=>x.id===cardId);
@@ -968,6 +1064,7 @@ function renderDuel() {
     ${renderField(dv, isMyTurn)}
     ${renderActionBar(dv, isMyTurn)}
   </div>
+  ${renderTrapPrompt()}
   ${renderTooltip()}
   ${renderCtxMenu()}
   ${renderModal()}`;
@@ -1005,17 +1102,14 @@ function renderField(dv, isMyTurn) {
 
 function renderSide(pi, dv, isMyTurn, isEnemy) {
   const p=P(pi);
-  const showHand=!isEnemy;
   return `<div class="field-side">
     ${isEnemy?renderHandArea(p, isEnemy):''}
     <div class="field-main-area">
-      <!-- Left col: extra zones -->
       <div class="zone-col">
         ${renderSideZone('field','필드',p.fieldZone)}
         ${renderGYZone(pi, p)}
         ${renderBZone(pi, p)}
       </div>
-      <!-- Center: main field -->
       <div>
         ${isEnemy?`
         <div class="spell-row" style="margin-bottom:.3rem">
@@ -1031,7 +1125,6 @@ function renderSide(pi, dv, isMyTurn, isEnemy) {
           ${p.spellZones.map((z,i)=>renderZone(z,'szone',pi,'spell',i,isMyTurn,isEnemy)).join('')}
         </div>`}
       </div>
-      <!-- Right col: deck -->
       <div class="zone-col">
         ${renderDeckZone(p)}
       </div>
@@ -1046,12 +1139,19 @@ function renderZone(fieldCard, zoneClass, pi, zoneType, zoneIdx, isMyTurn, isEne
   let onclick='';
 
   if(!fieldCard){
-    // Empty zone click logic
+    // ─── [FIX] 빈 몬스터존 클릭: 핸드에서 카드 선택됐을 때만 pulse 표시
     if(!isEnemy && isMyTurn && App.ui.selectedHand!==null && !attacking){
       const dv=d();
       if((dv.phase==='MAIN1'||dv.phase==='MAIN2')&&dv.activePlayer===0){
-        if(zoneType==='monster') { extraClass='pulse'; onclick=`onEmptyMonsterClick(${zoneIdx})`; }
-        if(zoneType==='spell') { extraClass='pulse'; onclick=`onEmptySpellClick(${zoneIdx})`; }
+        if(zoneType==='monster') {
+          extraClass='pulse';
+          // ─── [FIX] event를 onclick 인라인에서 전달할 수 없으므로 직접 zoneIdx만 넘김
+          onclick=`handleEmptyZoneClick(event,${zoneIdx},'monster')`;
+        }
+        if(zoneType==='spell') {
+          extraClass='pulse';
+          onclick=`handleEmptyZoneClick(event,${zoneIdx},'spell')`;
+        }
       }
     }
     if(isEnemy&&attacking&&zoneType==='monster'){ extraClass='atk-target'; onclick=`doAttack(${attacking.zoneIdx},${zoneIdx})`; }
@@ -1064,18 +1164,22 @@ function renderZone(fieldCard, zoneClass, pi, zoneType, zoneIdx, isMyTurn, isEne
   const fc=getFrameColor(card);
   const isSelected=App.ui.attackingZone?.zoneIdx===zoneIdx&&!isEnemy&&zoneType==='monster';
 
-  // Click handlers
   if(!isEnemy&&isMyTurn&&zoneType==='monster'){
     const dv=d();
     if(dv.phase==='BATTLE'&&dv.activePlayer===0&&fieldCard.canAttack&&!fieldCard.attacked){
       onclick=`selectAttacker(${zoneIdx})`;
-    } else if(dv.phase==='MAIN1'||dv.phase==='MAIN2'){
+    } else if((dv.phase==='MAIN1'||dv.phase==='MAIN2')&&dv.activePlayer===0){
       onclick=`showMonsterCtx(event,${zoneIdx})`;
     }
     if(isSelected) extraClass='pulse';
   }
+  // ─── [FIX] 세트된 함정: 자신 턴 메인 페이즈에서만 수동 발동 가능
   if(!isEnemy&&zoneType==='spell'&&fieldCard&&!fieldCard.faceUp){
-    onclick=`activateTrap(${zoneIdx})`;
+    const dv=d();
+    if(isMyTurn && dv.activePlayer===0 && !fieldCard.setThisTurn){
+      onclick=`activateTrap(${zoneIdx})`;
+      extraClass='trap-ready';
+    }
   }
   if(isEnemy&&attacking&&zoneType==='monster'){ extraClass='atk-target'; onclick=`doAttack(${attacking.zoneIdx},${zoneIdx})`; }
 
@@ -1163,19 +1267,33 @@ function renderActionBar(dv, isMyTurn) {
         <button class="btn btn-red btn-sm" onclick="cancelAttack()">취소</button>
         <button class="btn btn-outline btn-sm" onclick="directAttackBtn()">직접 공격</button>
       `:''}
-      ${isMyTurn&&!atk?`
+      ${isMyTurn&&!atk&&!App.trapQueue?`
         ${dv.phase==='MAIN1'||dv.phase==='MAIN2'?`<button class="btn btn-outline btn-sm" onclick="activateSelectedSpell()">마법 발동</button>`:''}
         ${dv.phase==='MAIN1'?`<button class="btn btn-outline btn-sm" onclick="toBattle()">배틀 페이즈</button>`:''}
         <button class="btn btn-gold btn-sm" onclick="nextPhase()">다음 페이즈 →</button>
       `:''}
-      ${!isMyTurn?`<span style="font-size:.75rem;color:var(--muted);font-family:var(--cinzel);letter-spacing:.08em">상대 턴 진행 중...</span>`:''}
+      ${!isMyTurn&&!App.trapQueue?`<span style="font-size:.75rem;color:var(--muted);font-family:var(--cinzel);letter-spacing:.08em">상대 턴 진행 중...</span>`:''}
       <button class="btn btn-red btn-sm" onclick="if(confirm('포기하시겠습니까?'))endDuel(1)">포기</button>
     </div>
   </div>`;
 }
 
+// ─── [NEW] 함정 발동 프롬프트 렌더
+function renderTrapPrompt() {
+  const tq = App.trapQueue;
+  if(!tq) return '';
+  const { fc, i } = tq.traps[tq.currentIdx];
+  const card = CARDDB[fc.cardId];
+  return `<div class="trap-prompt">
+    <span>⚠ 함정 발동 기회:</span>
+    <strong style="color:#ee88cc">${card?.name||'함정'}</strong>
+    <span style="color:var(--muted);font-size:.72rem">${card?.desc?.slice(0,40)||''}...</span>
+    <button class="trap-prompt-btn trap-activate-btn" onclick="respondTrap(true)">발동!</button>
+    <button class="trap-prompt-btn trap-pass-btn" onclick="respondTrap(false)">패스</button>
+  </div>`;
+}
+
 // ── TOOLTIP ───────────────────────────────
-// 툴팁은 render()와 완전히 분리된 독립 DOM 요소로 관리
 function getOrCreateTooltipEl() {
   let el = document.getElementById('_tooltip_fixed');
   if (!el) {
@@ -1221,15 +1339,16 @@ function positionTooltip(el, x, y) {
   el.style.top = Math.min(y + 10, window.innerHeight - 360) + 'px';
 }
 
-// render()에서 호출되는 인라인 툴팁은 빈 문자열 반환 (독립 DOM으로 대체)
 function renderTooltip() { return ''; }
 
 // ── CONTEXT MENU ──────────────────────────
 function renderCtxMenu() {
   if(!App.ctxMenu) return '';
   const {x,y,items}=App.ctxMenu;
-  const left=x>window.innerWidth-200?x-170:x;
-  return `<div class="ctxmenu" style="left:${left}px;top:${y}px">
+  // ─── [FIX] 화면 경계 보정
+  const left = Math.min(x, window.innerWidth - 180);
+  const top = Math.min(y, window.innerHeight - items.length * 42 - 20);
+  return `<div class="ctxmenu" style="left:${left}px;top:${top}px">
     ${items.map(item=>`<div class="ctxmenu-item ${item.cls||''}" onclick="${item.action};closeCtx()">${item.label}</div>`).join('')}
     <div class="ctxmenu-item" onclick="closeCtx()" style="color:var(--muted)">취소</div>
   </div>`;
@@ -1299,19 +1418,41 @@ function selectHand(idx) {
   render();
 }
 
-function onEmptyMonsterClick(zoneIdx) {
+// ─── [FIX] 빈 존 클릭 핸들러 통합 — event 객체를 올바르게 전달
+function handleEmptyZoneClick(event, zoneIdx, zoneType) {
+  if(zoneType==='monster') onEmptyMonsterClick(event, zoneIdx);
+  else if(zoneType==='spell') onEmptySpellClick(zoneIdx);
+}
+
+// ─── [FIX] onEmptyMonsterClick: event를 받아 ctxMenu 좌표를 실제 클릭 위치로 설정
+function onEmptyMonsterClick(event, zoneIdx) {
   const i=App.ui.selectedHand;
   if(i===null) return;
   const cardId=player().hand[i];
   const card=CARDDB[cardId];
   if(!card) return;
   if(!isMonster(card)||isExtraType(card)){ addLog('몬스터 카드만 소환 가능합니다!'); render(); return; }
-  // Show summon options
+
+  const lv=card.level||0;
+  const tributeNeeded=lv>=7?2:lv>=5?1:0;
+  const existingCount=player().monsterZones.filter(z=>z!==null).length;
+
+  if(tributeNeeded>0 && existingCount<tributeNeeded){
+    addLog(`레벨 ${lv} 소환에는 릴리스 ${tributeNeeded}체 필요합니다! (현재 ${existingCount}체)`);
+    render();
+    return;
+  }
+
+  // 클릭한 위치 기반으로 컨텍스트 메뉴 표시
+  const mx = event ? (event.clientX||300) : 300;
+  const my = event ? (event.clientY||300) : 300;
+
   App.ctxMenu={
-    x: 300, y: 300,
+    x: mx, y: my,
     items:[
-      {label:'공격 표시로 소환', action:`normalSummon(${i},${zoneIdx},'ATK');App.ui.selectedHand=null;render()`},
-      {label:'세트 (수비 표시)', action:`setMonster(${i},${zoneIdx});App.ui.selectedHand=null;render()`},
+      {label:'⚔ 공격 표시로 소환', action:`normalSummon(${i},${zoneIdx},'ATK');App.ui.selectedHand=null`},
+      {label:'🛡 수비 표시로 소환', action:`normalSummon(${i},${zoneIdx},'DEF');App.ui.selectedHand=null`},
+      {label:'🃏 뒤집어 세트', action:`setMonster(${i},${zoneIdx});App.ui.selectedHand=null`},
     ]
   };
   render();
@@ -1333,12 +1474,11 @@ function showMonsterCtx(event, zoneIdx) {
   const fc=player().monsterZones[zoneIdx];
   if(!fc) return;
   const items=[
-    {label:'표시 방향 변경', action:`changePos(${zoneIdx})`},
+    {label:'↔ 표시 방향 변경', action:`changePos(${zoneIdx})`},
   ];
-  // Check activatable effects
   const card=CARDDB[fc.cardId];
   if(card?.effects?.some(e=>e.trigger==='manual')){
-    items.unshift({label:'효과 발동', action:`activateManualEffect(${zoneIdx})`});
+    items.unshift({label:'◈ 효과 발동', action:`activateManualEffect(${zoneIdx})`});
   }
   App.ctxMenu={x:event.clientX, y:event.clientY, items};
   render();
@@ -1404,7 +1544,6 @@ function activateSelectedSpell() {
 }
 
 function toBattle() {
-  // canAttack은 BATTLE 페이즈 시작 시 onPhaseStart에서 처리됨
   d().phase='MAIN1';
   nextPhase();
 }
@@ -1442,7 +1581,7 @@ function showResult() {
     <div class="result-sub">${r.isPlayer?'멋진 승리입니다!':'분발하세요!'}</div>
     <div class="result-btns">
       <button class="btn btn-gold" onclick="App.result=null;App.duel=null;App.screen='title';App.logs=[];render()">타이틀로</button>
-      <button class="btn btn-outline" onclick="App.result=null;App.duel=null;startDuelWithDeck?.[0]??quickStart()">재도전</button>
+      <button class="btn btn-outline" onclick="App.result=null;App.duel=null;quickStart()">재도전</button>
     </div>
   </div>`;
   document.body.appendChild(el);
@@ -1451,7 +1590,7 @@ function showResult() {
 // ── TOAST ─────────────────────────────────
 function renderToast(msg, type='success') {
   const el=document.createElement('div');
-  el.style.cssText=`position:fixed;bottom:1.5rem;right:1.5rem;background:var(--bg2);border:1px solid ${type==='success'?'var(--green)':type==='error'?'var(--red)':'var(--gold)'};border-radius:3px;padding:.6rem 1rem;font-size:.8rem;z-index:9999;animation:none;color:var(--text)`;
+  el.style.cssText=`position:fixed;bottom:1.5rem;right:1.5rem;background:var(--bg2);border:1px solid ${type==='success'?'var(--green)':type==='error'?'var(--red)':'var(--gold)'};border-radius:3px;padding:.6rem 1rem;font-size:.8rem;z-index:9999;color:var(--text)`;
   el.textContent=msg;
   document.body.appendChild(el);
   setTimeout(()=>el.remove(),2500);
@@ -1461,7 +1600,7 @@ function renderToast(msg, type='success') {
 function goTo(screen) { App.screen=screen; App.ctxMenu=null; App.tooltip=null; render(); }
 
 function openAdmin() {
-  window.open('admin.html','_blank');
+  window.open('duel-arena-admin.html','_blank');
 }
 
 function attachGlobalHandlers() {
