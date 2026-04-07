@@ -280,14 +280,22 @@ const EffectEngine = {
   resolveSpecialSummon(action, ctx) {
     const { state, controller, log } = ctx;
     const p = state.players[controller];
-    if (action.target === 'from_gy' && p.graveyard.length > 0) {
-      const cardId = p.graveyard[p.graveyard.length - 1];
+    if (action.target === 'from_gy') {
+      // 묘지에서 몬스터만 역순으로 탐색
+      const gyIdx = [...p.graveyard].reverse().findIndex(id => {
+        const c = ctx.cardDB[id];
+        return c && c.type === 'monster' && !isExtraType(c);
+      });
+      if (gyIdx === -1) { log('묘지에 소환 가능한 몬스터가 없습니다!', 'danger'); return { type: 'special_summon' }; }
+      const realIdx = p.graveyard.length - 1 - gyIdx;
+      const cardId = p.graveyard[realIdx];
       const zoneIdx = p.monsterZones.findIndex(z => z === null);
-      if (zoneIdx > -1) {
-        p.monsterZones[zoneIdx] = createFieldCard(cardId, 'ATK', true);
-        p.graveyard.pop();
-        log(`묘지에서 특수 소환!`, 'special');
-      }
+      if (zoneIdx === -1) { log('몬스터존이 가득 찼습니다!', 'danger'); return { type: 'special_summon' }; }
+      const fc = createFieldCard(cardId, 'ATK', true);
+      fc.summonedThisTurn = true;
+      p.monsterZones[zoneIdx] = fc;
+      p.graveyard.splice(realIdx, 1);
+      log(`묘지에서 특수 소환: ${ctx.cardDB[cardId]?.name||cardId}!`, 'special');
     }
     return { type: 'special_summon' };
   },
