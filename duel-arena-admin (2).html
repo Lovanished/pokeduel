@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DUEL ARENA — 관리자</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cinzel+Decorative:wght@700&family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0c0c14; --bg2: #11111c; --bg3: #161624;
+  --border: #222236; --border2: #2e2e4a;
+  --gold: #c9a84c; --gold2: #f0d080; --gold3: #8a6a20;
+  --red: #cc3344; --green: #22aa66; --blue: #2266cc; --purple: #8844cc;
+  --text: #e0d8cc; --muted: #7a7268; --mono: 'JetBrains Mono', monospace;
+  --sans: 'Noto Sans KR', sans-serif;
+  --cinzel: 'Cinzel', serif;
+  --r: 4px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* ─── LAYOUT ─── */
+.layout { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+.sidebar {
+  background: var(--bg2); border-right: 1px solid var(--border);
+  padding: 1.5rem 0; display: flex; flex-direction: column; gap: 0;
+  position: sticky; top: 0; height: 100vh;
+}
+.sidebar-logo {
+  font-family: 'Cinzel Decorative', serif; font-size: 0.9rem;
+  color: var(--gold); padding: 0 1.2rem 1.5rem;
+  border-bottom: 1px solid var(--border); margin-bottom: 0.5rem;
+  line-height: 1.3;
+}
+.sidebar-logo small { font-family: var(--cinzel); font-size: 0.65rem; color: var(--muted); display: block; }
+.nav-item {
+  padding: 0.65rem 1.2rem; cursor: pointer; font-size: 0.82rem;
+  color: var(--muted); border-left: 2px solid transparent;
+  transition: all 0.15s; display: flex; align-items: center; gap: 0.6rem;
+  font-family: var(--cinzel); letter-spacing: 0.05em;
+}
+.nav-item:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+.nav-item.active { color: var(--gold); border-left-color: var(--gold); background: rgba(201,168,76,0.06); }
+.nav-icon { font-size: 0.9rem; width: 16px; text-align: center; }
+.main { padding: 2rem; overflow-y: auto; }
+
+/* ─── HEADER ─── */
+.page-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 1.5rem; padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.page-title { font-family: var(--cinzel); font-size: 1.2rem; color: var(--gold); }
+.page-sub { font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem; }
+
+/* ─── BUTTONS ─── */
+.btn {
+  padding: 0.45rem 1rem; font-family: var(--cinzel); font-size: 0.78rem;
+  letter-spacing: 0.08em; cursor: pointer; border-radius: var(--r);
+  transition: all 0.15s; border: 1px solid;
+}
+.btn-primary { background: var(--gold3); border-color: var(--gold); color: #0a0a0a; }
+.btn-primary:hover { background: var(--gold); }
+.btn-secondary { background: transparent; border-color: var(--border2); color: var(--text); }
+.btn-secondary:hover { border-color: var(--gold); color: var(--gold); }
+.btn-danger { background: transparent; border-color: var(--red); color: var(--red); }
+.btn-danger:hover { background: rgba(204,51,68,0.1); }
+.btn-success { background: transparent; border-color: var(--green); color: var(--green); }
+.btn-success:hover { background: rgba(34,170,102,0.1); }
+.btn-sm { padding: 0.3rem 0.7rem; font-size: 0.72rem; }
+
+/* ─── CARDS GRID ─── */
+.cards-toolbar {
+  display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;
+}
+.search-field {
+  background: var(--bg2); border: 1px solid var(--border);
+  color: var(--text); padding: 0.45rem 0.8rem; font-family: var(--sans);
+  font-size: 0.82rem; border-radius: var(--r); outline: none; min-width: 200px;
+  transition: border-color 0.15s;
+}
+.search-field:focus { border-color: var(--gold); }
+.search-field::placeholder { color: var(--muted); }
+select.search-field { cursor: pointer; }
+
+.card-table { width: 100%; border-collapse: collapse; }
+.card-table th {
+  font-family: var(--cinzel); font-size: 0.7rem; color: var(--muted);
+  letter-spacing: 0.1em; text-align: left; padding: 0.5rem 0.8rem;
+  border-bottom: 1px solid var(--border); white-space: nowrap;
+}
+.card-table td {
+  padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--border);
+  font-size: 0.82rem; vertical-align: middle;
+}
+.card-table tr:hover td { background: rgba(255,255,255,0.02); }
+.card-icon { font-size: 1.2rem; }
+.card-name-cell { font-weight: 500; }
+.type-badge {
+  display: inline-block; padding: 0.15rem 0.5rem; border-radius: 2px;
+  font-size: 0.68rem; font-family: var(--cinzel); letter-spacing: 0.05em;
+}
+.type-monster { background: rgba(200,168,75,0.15); color: #c8a84b; border: 1px solid rgba(200,168,75,0.3); }
+.type-spell { background: rgba(10,106,74,0.2); color: #0aaa74; border: 1px solid rgba(10,106,74,0.4); }
+.type-trap { background: rgba(138,10,90,0.2); color: #cc44aa; border: 1px solid rgba(138,10,90,0.4); }
+.rarity-dot {
+  width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+}
+.restriction-badge {
+  display: inline-block; padding: 0.1rem 0.4rem; border-radius: 2px;
+  font-size: 0.65rem; font-family: var(--cinzel);
+}
+.rest-forbidden { background: rgba(204,51,68,0.2); color: #ee6677; border: 1px solid rgba(204,51,68,0.4); }
+.rest-limited { background: rgba(204,136,0,0.2); color: #ffaa44; border: 1px solid rgba(204,136,0,0.4); }
+.rest-semi { background: rgba(204,204,0,0.15); color: #dddd44; border: 1px solid rgba(204,204,0,0.3); }
+.actions-cell { display: flex; gap: 0.3rem; }
+
+/* ─── CARD EDITOR ─── */
+.editor-layout { display: grid; grid-template-columns: 260px 1fr; gap: 1.5rem; }
+.card-preview {
+  position: sticky; top: 2rem;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 1rem; text-align: center;
+}
+.preview-card {
+  width: 160px; height: 230px; margin: 0 auto 0.8rem;
+  border-radius: 6px; display: flex; flex-direction: column;
+  overflow: hidden; position: relative; border: 2px solid;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+}
+.preview-frame-top {
+  padding: 6px 8px 4px; font-family: var(--cinzel);
+  font-size: 0.65rem; font-weight: 600; color: rgba(0,0,0,0.85);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.preview-image {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  font-size: 3.5rem; background: rgba(0,0,0,0.25);
+}
+.preview-frame-bot {
+  padding: 4px 6px; font-size: 0.55rem;
+  color: rgba(0,0,0,0.75); background: rgba(255,255,255,0.15);
+  display: flex; justify-content: space-between;
+}
+.preview-name { font-family: var(--cinzel); font-size: 0.88rem; color: var(--gold); font-weight: 600; margin-bottom: 0.3rem; }
+.preview-sub { font-size: 0.72rem; color: var(--muted); }
+.editor-form { display: flex; flex-direction: column; gap: 1rem; }
+.form-section {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 1rem;
+}
+.form-section-title {
+  font-family: var(--cinzel); font-size: 0.72rem; color: var(--muted);
+  letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 0.8rem;
+  padding-bottom: 0.5rem; border-bottom: 1px solid var(--border);
+}
+.form-row { display: grid; gap: 0.7rem; }
+.form-row.cols-2 { grid-template-columns: 1fr 1fr; }
+.form-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+.form-row.cols-4 { grid-template-columns: repeat(4, 1fr); }
+.form-group { display: flex; flex-direction: column; gap: 0.3rem; }
+.form-label {
+  font-size: 0.72rem; color: var(--muted); font-family: var(--cinzel);
+  letter-spacing: 0.06em;
+}
+.form-input, .form-select, .form-textarea {
+  background: var(--bg3); border: 1px solid var(--border);
+  color: var(--text); padding: 0.45rem 0.7rem; font-family: var(--sans);
+  font-size: 0.82rem; border-radius: var(--r); outline: none;
+  transition: border-color 0.15s; width: 100%;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--gold); }
+.form-textarea { resize: vertical; min-height: 70px; font-family: var(--sans); }
+.form-select { cursor: pointer; }
+.color-row { display: flex; gap: 0.4rem; align-items: center; }
+.color-swatch {
+  width: 32px; height: 32px; border-radius: 3px; cursor: pointer;
+  border: 2px solid transparent; transition: all 0.15s; flex-shrink: 0;
+}
+.color-swatch:hover, .color-swatch.active { border-color: var(--gold); transform: scale(1.1); }
+
+/* ─── EFFECT EDITOR ─── */
+.effect-list { display: flex; flex-direction: column; gap: 0.6rem; }
+.effect-item {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 0.8rem; position: relative;
+}
+.effect-header {
+  display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.6rem;
+}
+.effect-number {
+  width: 20px; height: 20px; background: var(--gold3); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--cinzel); font-size: 0.65rem; color: #0a0a0a; flex-shrink: 0;
+}
+.effect-trigger-label { font-size: 0.75rem; color: var(--gold); font-family: var(--cinzel); flex: 1; }
+.effect-desc-preview { font-size: 0.75rem; color: var(--muted); margin-top: 0.3rem; }
+.action-list { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.5rem; }
+.action-row {
+  display: grid; grid-template-columns: 1fr 1fr 80px 28px; gap: 0.3rem;
+  align-items: center;
+}
+.action-del {
+  background: none; border: none; color: var(--muted); cursor: pointer;
+  font-size: 0.8rem; padding: 0.2rem; border-radius: 2px;
+  transition: color 0.15s;
+}
+.action-del:hover { color: var(--red); }
+.bc-row { display:grid; gap:0.3rem; align-items:center; margin-bottom:0.3rem; }
+.add-action-btn {
+  background: none; border: 1px dashed var(--border2); color: var(--muted);
+  width: 100%; padding: 0.35rem; font-size: 0.75rem; cursor: pointer;
+  border-radius: var(--r); font-family: var(--cinzel); letter-spacing: 0.05em;
+  transition: all 0.15s; margin-top: 0.3rem;
+}
+.add-action-btn:hover { border-color: var(--gold); color: var(--gold); }
+.add-effect-btn {
+  background: none; border: 1px dashed var(--gold3); color: var(--gold);
+  width: 100%; padding: 0.5rem; font-size: 0.8rem; cursor: pointer;
+  border-radius: var(--r); font-family: var(--cinzel); letter-spacing: 0.05em;
+  transition: all 0.15s; margin-top: 0.5rem;
+}
+.add-effect-btn:hover { background: rgba(201,168,76,0.08); }
+
+/* ─── RESTRICTIONS ─── */
+.restriction-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.8rem;
+}
+.restriction-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 0.8rem;
+  display: flex; flex-direction: column; gap: 0.5rem;
+}
+.rest-card-header { display: flex; align-items: center; gap: 0.6rem; }
+.rest-card-icon { font-size: 1.3rem; }
+.rest-card-name { font-size: 0.85rem; font-weight: 500; flex: 1; }
+.rest-select {
+  background: var(--bg3); border: 1px solid var(--border);
+  color: var(--text); padding: 0.3rem 0.5rem;
+  font-size: 0.75rem; border-radius: 2px; cursor: pointer; outline: none;
+  font-family: var(--sans); width: 100%;
+}
+
+/* ─── LOGIN ─── */
+.login-screen {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: var(--bg);
+}
+.login-box {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 6px; padding: 2.5rem; width: 320px;
+  text-align: center; box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+}
+.login-title { font-family: 'Cinzel Decorative', serif; color: var(--gold); margin-bottom: 0.3rem; }
+.login-sub { font-size: 0.78rem; color: var(--muted); margin-bottom: 1.5rem; }
+.login-error { font-size: 0.78rem; color: var(--red); margin-top: 0.5rem; }
+
+/* ─── STAT CARDS ─── */
+.stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.8rem; margin-bottom: 1.5rem; }
+.stat-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 1rem;
+}
+.stat-label { font-size: 0.7rem; color: var(--muted); font-family: var(--cinzel); letter-spacing: 0.1em; }
+.stat-value { font-size: 1.8rem; font-family: var(--cinzel); color: var(--gold); margin-top: 0.2rem; }
+.stat-sub { font-size: 0.7rem; color: var(--muted); }
+
+/* ─── JSON EDITOR ─── */
+.json-editor {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 1rem;
+  font-family: var(--mono); font-size: 0.78rem; color: #7ec8e3;
+  min-height: 120px; resize: vertical; width: 100%; outline: none;
+  line-height: 1.6;
+}
+.json-editor:focus { border-color: var(--gold); }
+
+/* ─── TOAST ─── */
+.toast {
+  position: fixed; bottom: 1.5rem; right: 1.5rem;
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: var(--r); padding: 0.8rem 1.2rem;
+  font-size: 0.82rem; box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+  z-index: 9999; animation: toastIn 0.3s ease;
+  display: flex; align-items: center; gap: 0.6rem;
+}
+.toast.success { border-color: var(--green); }
+.toast.error { border-color: var(--red); }
+@keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ─── MISC ─── */
+.empty-state {
+  text-align: center; padding: 3rem; color: var(--muted);
+  font-size: 0.85rem; border: 1px dashed var(--border);
+  border-radius: var(--r);
+}
+.divider { height: 1px; background: var(--border); margin: 1rem 0; }
+.tag {
+  display: inline-block; padding: 0.1rem 0.4rem; border-radius: 2px;
+  font-size: 0.65rem; font-family: var(--cinzel);
+  background: rgba(255,255,255,0.06); color: var(--muted); margin-right: 0.2rem;
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="shared-data.js"></script>
+<script>
+// ─── ADMIN CONSTANTS ───────────────────────────────────────
+const ADMIN_PASSWORD = 'ADMIN1234'; // 실제 배포 시 변경하세요
+
+const CARD_TYPES = ['monster','spell','trap'];
+const MONSTER_SUBTYPES = ['normal','effect','ritual','fusion','synchro','xyz','link'];
+const SPELL_SUBTYPES = ['normal','continuous','quickplay','field','equip','ritual'];
+const TRAP_SUBTYPES = ['normal','continuous','counter'];
+const ATTRIBUTES = ['DARK','LIGHT','FIRE','WATER','EARTH','WIND','DIVINE'];
+const RACES = ['전사족','마법사족','드래곤족','악마족','천사족','언데드족','기계족','수족','화염족','암석족','식물족','곤충족','요정족','야수족','조류족'];
+const RARITIES = ['common','rare','super','ultra','secret'];
+const TRIGGER_TYPES = [
+  {v:'on_summon', l:'소환 성공 시'},
+  {v:'on_normal_summon', l:'일반 소환 성공 시'},
+  {v:'on_special_summon', l:'특수 소환 성공 시'},
+  {v:'on_destroy', l:'파괴되었을 때'},
+  {v:'on_send_to_gy', l:'묘지로 보내졌을 때'},
+  {v:'on_activate', l:'발동 시 (마법/함정)'},
+  {v:'on_attack', l:'공격 선언 시'},
+  {v:'on_attacked', l:'공격 대상이 되었을 때'},
+  {v:'on_damage', l:'데미지를 받았을 때'},
+  {v:'quick_effect', l:'빠른 효과 (함정처럼 사용)'},
+  {v:'continuous', l:'지속 효과'},
+  {v:'manual', l:'수동 발동'},
+];
+const ACTION_TYPES = [
+  {v:'draw', l:'드로우', hasTarget:false, hasValue:true, valueLabel:'장수'},
+  {v:'damage', l:'데미지', hasTarget:true, hasValue:true, valueLabel:'데미지량'},
+  {v:'heal', l:'LP 회복', hasTarget:false, hasValue:true, valueLabel:'회복량'},
+  {v:'destroy', l:'파괴', hasTarget:true, hasValue:true, valueLabel:'매수'},
+  {v:'banish', l:'제외', hasTarget:true, hasValue:true, valueLabel:'매수'},
+  {v:'return_hand', l:'핸드로 반환', hasTarget:true, hasValue:true, valueLabel:'매수'},
+  {v:'special_summon', l:'특수 소환', hasTarget:true, hasValue:false},
+  {v:'change_atk', l:'ATK 변경', hasTarget:true, hasValue:true, valueLabel:'변화량'},
+  {v:'change_def', l:'DEF 변경', hasTarget:true, hasValue:true, valueLabel:'변화량'},
+  {v:'negate', l:'효과 무효', hasTarget:false, hasValue:false},
+  {v:'mill', l:'덱 상단→묘지', hasTarget:true, hasValue:true, valueLabel:'장수'},
+];
+const TARGET_TYPES = [
+  {v:'self', l:'자신 (이 카드)'},
+  {v:'player', l:'자신 플레이어'},
+  {v:'opponent', l:'상대 플레이어'},
+  {v:'own_monster', l:'자신 몬스터'},
+  {v:'opponent_monster', l:'상대 몬스터'},
+  {v:'any_spell_field', l:'마법/함정 (상대)'},
+  {v:'any_gy', l:'묘지에서'},
+  {v:'from_gy', l:'묘지에서 (소환)'},
+  {v:'hand', l:'핸드에서'},
+  {v:'deck_top', l:'덱 상단'},
+];
+
+// Frame color presets
+const FRAME_PRESETS = [
+  { label: '일반 몬스터', color: '#c8a84b' },
+  { label: '효과 몬스터', color: '#c06a0a' },
+  { label: '의식', color: '#3a5ba0' },
+  { label: '융합', color: '#6a3a8a' },
+  { label: '싱크로', color: '#c8c8c8' },
+  { label: 'XYZ', color: '#222222' },
+  { label: '링크', color: '#0a4a8a' },
+  { label: '마법', color: '#0a6a4a' },
+  { label: '함정', color: '#8a0a5a' },
+  { label: '커스텀 RED', color: '#8a1a1a' },
+  { label: '커스텀 TEAL', color: '#0a5a5a' },
+  { label: '커스텀 NAVY', color: '#0a1a5a' },
+];
+
+// ─── STATE ────────────────────────────────────────────────
+let S = {
+  page: DB.isAdmin() ? 'dashboard' : 'login',
+  cards: [],
+  cardIndex: {},
+  restrictions: {},
+  search: '', typeFilter: 'all',
+  editingCard: null,   // null = list, card obj = edit mode
+  isNew: false,
+  loginError: '',
+};
+
+function init() {
+  S.cards = DB.getCards();
+  S.cardIndex = buildCardIndex(S.cards);
+  S.restrictions = DB.getRestrictions();
+  render();
+}
+
+// ─── RENDER ───────────────────────────────────────────────
+function render() {
+  document.getElementById('app').innerHTML =
+    S.page === 'login' ? renderLogin() : renderAdmin();
+}
+
+function renderLogin() {
+  return `<div class="login-screen">
+    <div class="login-box">
+      <div class="login-title">DUEL ARENA</div>
+      <div class="login-sub">관리자 패널 — 로그인이 필요합니다</div>
+      <div class="form-group" style="margin-bottom:0.8rem">
+        <div class="form-label">비밀번호</div>
+        <input class="form-input" type="password" id="adminPw" placeholder="관리자 비밀번호"
+          onkeydown="if(event.key==='Enter')tryLogin()">
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="tryLogin()">로그인</button>
+      ${S.loginError ? `<div class="login-error">⚠ ${S.loginError}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+function renderAdmin() {
+  return `<div class="layout">
+    <div class="sidebar">
+      <div class="sidebar-logo">DUEL ARENA<small>관리자 패널</small></div>
+      ${[
+        {id:'dashboard', icon:'◈', label:'대시보드'},
+        {id:'cards', icon:'⚔', label:'카드 관리'},
+        {id:'restrictions', icon:'⛔', label:'제한 카드'},
+        {id:'export', icon:'↗', label:'내보내기/불러오기'},
+      ].map(n => `<div class="nav-item ${S.page===n.id?'active':''}" onclick="goPage('${n.id}')">
+        <span class="nav-icon">${n.icon}</span>${n.label}
+      </div>`).join('')}
+      <div style="flex:1"></div>
+      <div class="nav-item" onclick="logout()" style="color:var(--red);margin-top:auto">
+        <span class="nav-icon">←</span>로그아웃
+      </div>
+    </div>
+    <div class="main">
+      ${S.page==='dashboard' ? renderDashboard()
+      : S.page==='cards' ? (S.editingCard ? renderCardEditor() : renderCardList())
+      : S.page==='restrictions' ? renderRestrictions()
+      : S.page==='export' ? renderExport()
+      : ''}
+    </div>
+  </div>`;
+}
+
+function renderDashboard() {
+  const cards = S.cards;
+  const monsters = cards.filter(c=>c.type==='monster').length;
+  const spells = cards.filter(c=>c.type==='spell').length;
+  const traps = cards.filter(c=>c.type==='trap').length;
+  const forbidden = Object.values(S.restrictions).filter(v=>v==='forbidden').length;
+  return `
+  <div class="page-header">
+    <div><div class="page-title">대시보드</div><div class="page-sub">카드 풀 현황</div></div>
+  </div>
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-label">전체 카드</div><div class="stat-value">${cards.length}</div></div>
+    <div class="stat-card"><div class="stat-label">몬스터</div><div class="stat-value">${monsters}</div><div class="stat-sub">효과/일반/융합 등</div></div>
+    <div class="stat-card"><div class="stat-label">마법 카드</div><div class="stat-value">${spells}</div></div>
+    <div class="stat-card"><div class="stat-label">함정 카드</div><div class="stat-value">${traps}</div></div>
+    <div class="stat-card"><div class="stat-label">금지 카드</div><div class="stat-value" style="color:var(--red)">${forbidden}</div></div>
+  </div>
+  <div class="form-section">
+    <div class="form-section-title">카드 분포</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1rem">
+      ${['common','rare','super','ultra','secret'].map(r => {
+        const count = cards.filter(c=>c.rarity===r).length;
+        const style = RARITY_STYLES[r];
+        return `<div style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem">
+          <div class="rarity-dot" style="background:${style.color}"></div>
+          <span style="color:var(--muted);font-family:var(--cinzel);font-size:0.72rem">${style.label}</span>
+          <span style="margin-left:auto;font-family:var(--cinzel)">${count}</span>
+        </div>`;
+      }).join('')}
+    </div>
+    <button class="btn btn-primary" onclick="goPage('cards')">카드 관리하기 →</button>
+  </div>`;
+}
+
+function renderCardList() {
+  const filtered = S.cards.filter(c => {
+    const q = S.search.toLowerCase();
+    const typeOk = S.typeFilter === 'all' || c.type === S.typeFilter;
+    const nameOk = !q || c.name.toLowerCase().includes(q) || (c.desc||'').toLowerCase().includes(q);
+    return typeOk && nameOk;
+  });
+
+  return `
+  <div class="page-header">
+    <div><div class="page-title">카드 관리</div><div class="page-sub">총 ${S.cards.length}장 등록됨</div></div>
+    <button class="btn btn-primary" onclick="newCard()">+ 새 카드 추가</button>
+  </div>
+  <div class="cards-toolbar">
+    <input class="search-field" placeholder="카드 이름/텍스트 검색..." value="${S.search}"
+      oninput="S.search=this.value;render()">
+    <select class="search-field" onchange="S.typeFilter=this.value;render()">
+      <option value="all" ${S.typeFilter==='all'?'selected':''}>전체</option>
+      <option value="monster" ${S.typeFilter==='monster'?'selected':''}>몬스터</option>
+      <option value="spell" ${S.typeFilter==='spell'?'selected':''}>마법</option>
+      <option value="trap" ${S.typeFilter==='trap'?'selected':''}>함정</option>
+    </select>
+    <span style="font-size:0.78rem;color:var(--muted);margin-left:0.5rem">${filtered.length}건 검색됨</span>
+  </div>
+  ${filtered.length === 0 ? '<div class="empty-state">검색 결과가 없습니다.</div>' : `
+  <table class="card-table">
+    <thead>
+      <tr>
+        <th></th><th>이름</th><th>타입</th><th>서브타입</th><th>레벨</th>
+        <th>ATK/DEF</th><th>효과 수</th><th>레어도</th><th>제한</th><th>관리</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${filtered.map(c => {
+        const rest = S.restrictions[c.id];
+        const rarStyle = RARITY_STYLES[c.rarity||'common'];
+        return `<tr>
+          <td><span class="card-icon">${(()=>{const img=c.image||'?';return (img.startsWith('http')||img.startsWith('data:'))?`<img src="${img}" style="width:24px;height:32px;object-fit:cover;border-radius:2px" onerror="this.textContent='🖼'">`:img;})()}</span></td>
+          <td class="card-name-cell">${c.name}</td>
+          <td><span class="type-badge type-${c.type}">${{monster:'몬스터',spell:'마법',trap:'함정'}[c.type]}</span></td>
+          <td style="font-size:0.75rem;color:var(--muted)">${c.subtype||'-'}</td>
+          <td style="font-family:var(--cinzel)">${c.type==='monster'?'★'+(c.level||0):'-'}</td>
+          <td style="font-family:var(--cinzel);font-size:0.78rem">
+            ${c.type==='monster'?`<span style="color:#f06060">${c.atk??'?'}</span> / <span style="color:#6090f0">${c.def??'?'}</span>`:'-'}
+          </td>
+          <td style="font-family:var(--cinzel);text-align:center">${(c.effects||[]).length}</td>
+          <td><div class="rarity-dot" style="background:${rarStyle.color}" title="${rarStyle.label}"></div></td>
+          <td>${rest?`<span class="restriction-badge rest-${rest}">${{forbidden:'금지',limited:'제한',semi:'준제한'}[rest]}</span>`:'<span style="color:var(--muted);font-size:0.72rem">-</span>'}</td>
+          <td class="actions-cell">
+            <button class="btn btn-sm btn-secondary" onclick="editCard('${c.id}')">편집</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteCard('${c.id}')">삭제</button>
+          </td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table>`}`;
+}
+
+function renderCardEditor() {
+  const c = S.editingCard;
+  const frameColor = c.frameColor || getFrameColor(c);
+  const subtypes = c.type==='monster' ? MONSTER_SUBTYPES : c.type==='spell' ? SPELL_SUBTYPES : TRAP_SUBTYPES;
+
+  return `
+  <div class="page-header">
+    <div>
+      <div class="page-title">${S.isNew ? '새 카드 추가' : '카드 편집'}</div>
+      <div class="page-sub">${S.isNew ? '새로운 커스텀 카드를 만듭니다' : `편집 중: ${c.name}`}</div>
+    </div>
+    <div style="display:flex;gap:0.5rem">
+      <button class="btn btn-secondary" onclick="cancelEdit()">취소</button>
+      <button class="btn btn-primary" onclick="saveCard()">저장</button>
+    </div>
+  </div>
+  <div class="editor-layout">
+    <!-- PREVIEW -->
+    <div>
+      <div class="card-preview">
+        <div class="preview-card" style="border-color:${frameColor};background:linear-gradient(180deg,${frameColor}33,${frameColor}11)">
+          <div class="preview-frame-top" style="background:${frameColor}cc">
+            <span>${c.name||'카드 이름'}</span>
+            ${c.type==='monster'?`<span>${'★'.repeat(Math.min(c.level||0,8))}</span>`:''}
+          </div>
+          <div class="preview-image">${(()=>{const img=c.image||'?';const isUrl=img.startsWith('http')||img.startsWith('data:');return isUrl?`<img src="${img}" style="max-width:100%;max-height:100%;object-fit:cover" onerror="this.style.display='none'">` : `<span style="font-size:${img.length>2?'2.2rem':'3rem'}">${img}</span>`;})()}</div>
+          <div class="preview-frame-bot" style="background:${frameColor}44">
+            ${c.type==='monster'?`<span>ATK ${c.atk??0}</span><span>DEF ${c.def??0}</span>`:`<span>${c.subtype||''} 마법</span><span></span>`}
+          </div>
+        </div>
+        <div class="preview-name">${c.name||'이름 없음'}</div>
+        <div class="preview-sub">${c.type==='monster'?`Lv.${c.level||0} ${c.attribute||''} / ${c.race||''}`:c.type==='spell'?'마법 카드':'함정 카드'}</div>
+        <div style="margin-top:0.6rem;font-size:0.68rem;color:var(--muted);line-height:1.5;text-align:left">
+          ${(c.desc||'').slice(0,120)}${(c.desc||'').length>120?'...':''}
+        </div>
+      </div>
+    </div>
+
+    <!-- FORM -->
+    <div class="editor-form">
+      <!-- 기본 정보 -->
+      <div class="form-section">
+        <div class="form-section-title">기본 정보</div>
+        <div class="form-row cols-2" style="margin-bottom:0.7rem">
+          <div class="form-group">
+            <div class="form-label">카드 이름 *</div>
+            <input class="form-input" value="${c.name||''}" oninput="updateEdit('name',this.value)" placeholder="카드 이름">
+          </div>
+          <div class="form-group">
+            <div class="form-label">카드 이미지</div>
+            <div style="display:flex;gap:0.4rem;align-items:stretch">
+              <input class="form-input" id="img-input" value="${c.image||''}"
+                oninput="updateEdit('image',this.value);updateImagePreview(this.value)"
+                placeholder="이모지(🔥) 또는 이미지 URL">
+              <button class="btn btn-secondary" style="flex-shrink:0;font-size:0.72rem;padding:0 0.6rem"
+                onclick="document.getElementById('img-file').click()">파일</button>
+              <input type="file" id="img-file" accept="image/*" style="display:none"
+                onchange="loadImageFile(this)">
+            </div>
+            <div style="display:flex;gap:0.4rem;margin-top:0.4rem;flex-wrap:wrap">
+              ${['⚔️','🔥','🌊','🌑','👼','🐉','🛡️','💥','⚡','🌟','💀','🌀','📜','✨','↩️','🔮','🕳️','⚠️','🔄','🌀','🗡','🩹'].map(e=>
+                `<div onclick="updateEdit('image','${e}');document.getElementById('img-input').value='${e}';updateImagePreview('${e}')"
+                  style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;cursor:pointer;border:1px solid var(--border);border-radius:3px;background:var(--bg3);transition:all .15s"
+                  onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--border)'">${e}</div>`
+              ).join('')}
+            </div>
+            <div id="img-preview" style="margin-top:0.4rem;display:${c.image&&c.image.length>2?'block':'none'}">
+              <img id="img-preview-el" src="${c.image&&c.image.startsWith('http')?c.image:''}"
+                style="max-width:80px;max-height:80px;border-radius:3px;border:1px solid var(--border);display:${c.image&&c.image.startsWith('http')?'block':'none'}">
+            </div>
+          </div>
+        </div>
+        <div class="form-row cols-3" style="margin-bottom:0.7rem">
+          <div class="form-group">
+            <div class="form-label">카드 종류 *</div>
+            <select class="form-select" onchange="updateEdit('type',this.value)">
+              ${CARD_TYPES.map(t=>`<option value="${t}" ${c.type===t?'selected':''}>${{monster:'몬스터',spell:'마법',trap:'함정'}[t]}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <div class="form-label">서브 타입</div>
+            <select class="form-select" onchange="updateEdit('subtype',this.value)">
+              ${subtypes.map(t=>`<option value="${t}" ${c.subtype===t?'selected':''}>${t}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <div class="form-label">레어도</div>
+            <select class="form-select" onchange="updateEdit('rarity',this.value)">
+              ${RARITIES.map(r=>`<option value="${r}" ${c.rarity===r?'selected':''}>${RARITY_STYLES[r].label} - ${r}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="form-label">카드 설명 / 효과 텍스트</div>
+          <textarea class="form-textarea" oninput="updateEdit('desc',this.value)">${c.desc||''}</textarea>
+        </div>
+      </div>
+
+      <!-- 몬스터 스탯 -->
+      ${c.type==='monster' ? `
+      <div class="form-section">
+        <div class="form-section-title">몬스터 능력치</div>
+        <div class="form-row cols-4" style="margin-bottom:0.7rem">
+          <div class="form-group">
+            <div class="form-label">레벨/랭크</div>
+            <input class="form-input" type="number" min="1" max="12" value="${c.level||1}" oninput="updateEdit('level',+this.value)">
+          </div>
+          <div class="form-group">
+            <div class="form-label">속성</div>
+            <select class="form-select" onchange="updateEdit('attribute',this.value)">
+              ${ATTRIBUTES.map(a=>`<option value="${a}" ${c.attribute===a?'selected':''}>${a}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <div class="form-label">ATK</div>
+            <input class="form-input" type="number" min="0" max="9999" value="${c.atk??0}" oninput="updateEdit('atk',+this.value)">
+          </div>
+          <div class="form-group">
+            <div class="form-label">DEF</div>
+            <input class="form-input" type="number" min="0" max="9999" value="${c.def??0}" oninput="updateEdit('def',+this.value)">
+          </div>
+        </div>
+        <div class="form-row cols-2">
+          <div class="form-group">
+            <div class="form-label">종족</div>
+            <select class="form-select" onchange="updateEdit('race',this.value)">
+              ${RACES.map(r=>`<option value="${r}" ${c.race===r?'selected':''}>${r}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <div class="form-label">소환 조건 (선택)</div>
+            <input class="form-input" value="${c.fusionMaterials?.join(',')||''}" 
+              oninput="updateEdit('fusionMaterials',this.value.split(',').filter(Boolean))" 
+              placeholder="융합 소재 카드 ID (쉼표 구분)">
+          </div>
+        </div>
+      </div>` : ''}
+
+      <!-- 카드 프레임 색상 -->
+      <div class="form-section">
+        <div class="form-section-title">카드 프레임 색상</div>
+        <div class="color-row" style="flex-wrap:wrap;gap:0.4rem">
+          ${FRAME_PRESETS.map(p => `
+            <div class="color-swatch ${(c.frameColor||'') === p.color ? 'active' : ''}"
+              style="background:${p.color}" title="${p.label}"
+              onclick="updateEdit('frameColor','${p.color}')"></div>
+          `).join('')}
+          <input type="color" class="form-input" style="width:40px;height:32px;padding:2px;cursor:pointer"
+            value="${c.frameColor||'#c8a84b'}" oninput="updateEdit('frameColor',this.value)">
+        </div>
+      </div>
+
+      <!-- 효과 편집기 -->
+      <div class="form-section">
+        <div class="form-section-title">효과 편집 (Effect Editor)</div>
+        <div class="effect-list" id="effectList">
+          ${(c.effects||[]).map((eff, ei) => renderEffectEditor(eff, ei)).join('')}
+        </div>
+        <button class="add-effect-btn" onclick="addEffect()">+ 효과 추가</button>
+      </div>
+
+      <!-- ID -->
+      <div class="form-section">
+        <div class="form-section-title">고급 설정</div>
+        <div class="form-row cols-2">
+          <div class="form-group">
+            <div class="form-label">카드 ID</div>
+            <input class="form-input" value="${c.id||''}" ${S.isNew?'':'readonly style="opacity:0.5"'}
+              oninput="updateEdit('id',this.value)" placeholder="고유 ID (영문+숫자)">
+          </div>
+          <div class="form-group">
+            <div class="form-label">특수 소환 불가</div>
+            <select class="form-select" onchange="updateEdit('noSpecialSummon',this.value==='true')">
+              <option value="false" ${!c.noSpecialSummon?'selected':''}>일반/특수 소환 가능</option>
+              <option value="true" ${c.noSpecialSummon?'selected':''}>특수 소환 불가</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderEffectEditor(eff, ei) {
+  const bcs = eff.builtinConditions || [];
+  return `<div class="effect-item" id="eff_${ei}">
+    <!-- 트리거 헤더 -->
+    <div class="effect-header">
+      <div class="effect-number">${ei+1}</div>
+      <div style="flex:1">
+        <select class="form-select" style="font-size:0.78rem" onchange="updateEffect(${ei},'trigger',this.value)">
+          ${TRIGGER_TYPES.map(t=>`<option value="${t.v}" ${eff.trigger===t.v?'selected':''}>${t.l}</option>`).join('')}
+        </select>
+      </div>
+      <button class="btn btn-sm btn-danger" onclick="removeEffect(${ei})">삭제</button>
+    </div>
+
+    <!-- 기본 옵션 행 -->
+    <div class="form-row cols-2" style="margin-bottom:0.5rem">
+      <div class="form-group">
+        <div class="form-label">효과 설명 (표시용)</div>
+        <input class="form-input" style="font-size:0.78rem" value="${eff.description||''}"
+          oninput="updateEffect(${ei},'description',this.value)" placeholder="플레이어에게 보여질 설명">
+      </div>
+      <div class="form-group">
+        <div class="form-label">옵션</div>
+        <div style="display:flex;gap:0.8rem;align-items:center;padding-top:0.4rem;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.78rem;cursor:pointer">
+            <input type="checkbox" ${eff.once?'checked':''} onchange="updateEffect(${ei},'once',this.checked)">
+            <span style="color:var(--muted)">1회 제한</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.78rem;cursor:pointer">
+            <input type="checkbox" ${eff.chainable?'checked':''} onchange="updateEffect(${ei},'chainable',this.checked)">
+            <span style="color:var(--muted)">체인 가능</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- 발동 위치 / 타이밍 -->
+    <div class="form-row cols-2" style="margin-bottom:0.6rem">
+      <div class="form-group">
+        <div class="form-label">발동 위치</div>
+        <select class="form-select" style="font-size:0.78rem" onchange="updateEffect(${ei},'activationLocation',this.value)">
+          <option value="field" ${(eff.activationLocation||'field')==='field'?'selected':''}>필드 (앞면 표시)</option>
+          <option value="hand" ${eff.activationLocation==='hand'?'selected':''}>패 (핸드에서 발동)</option>
+          <option value="gy" ${eff.activationLocation==='gy'?'selected':''}>묘지에서 발동</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <div class="form-label">발동 타이밍</div>
+        <select class="form-select" style="font-size:0.78rem" onchange="updateEffect(${ei},'activationScope',this.value)">
+          <option value="own_turn" ${(eff.activationScope||'own_turn')==='own_turn'?'selected':''}>자신의 턴만</option>
+          <option value="either_turn" ${eff.activationScope==='either_turn'?'selected':''}>양쪽 턴 모두</option>
+          <option value="opponent_turn" ${eff.activationScope==='opponent_turn'?'selected':''}>상대 턴만</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 발동 조건 (builtinConditions) -->
+    <div class="form-section-title" style="font-size:0.68rem;margin-bottom:0.4rem">발동 조건</div>
+    <div id="bc_list_${ei}" style="display:flex;flex-direction:column;gap:0.3rem;margin-bottom:0.3rem">
+      ${bcs.map((bc,bi)=>renderBuiltinConditionRow(bc,ei,bi)).join('')}
+    </div>
+    <button class="add-action-btn" onclick="addBuiltinCondition(${ei})">+ 조건 추가</button>
+
+    <div class="divider"></div>
+
+    <!-- 발동 비용 -->
+    <div class="form-section-title" style="font-size:0.68rem;margin-bottom:0.3rem">발동 비용</div>
+    <div class="action-list" id="cost_${ei}">
+      ${(eff.cost||[]).map((act,ai) => renderActionRow(act, ei, ai, 'cost')).join('')}
+    </div>
+    <button class="add-action-btn" onclick="addAction(${ei},'cost')">+ 비용 추가</button>
+
+    <div class="divider"></div>
+
+    <!-- 효과 액션 -->
+    <div class="form-section-title" style="font-size:0.68rem;margin-bottom:0.3rem">효과 액션</div>
+    <div class="action-list" id="actions_${ei}">
+      ${(eff.actions||[]).map((act,ai) => renderActionRow(act, ei, ai, 'actions')).join('')}
+    </div>
+    <button class="add-action-btn" onclick="addAction(${ei},'actions')">+ 액션 추가</button>
+  </div>`;
+}
+
+// ─── BUILTIN CONDITION ROW ─────────────────────────────────
+// 내장 조건 타입 정의
+const BUILTIN_COND_TYPES = [
+  {v:'opp_field_count_ge',  l:'상대 필드 카드 수 ≥ N', hasValue:true,  valuePlaceholder:'장'},
+  {v:'opp_monster_count_ge',l:'상대 몬스터 수 ≥ N',    hasValue:true,  valuePlaceholder:'체'},
+  {v:'my_lp_le',            l:'자신 LP ≤ N',            hasValue:true,  valuePlaceholder:''},
+  {v:'my_lp_ge',            l:'자신 LP ≥ N',            hasValue:true,  valuePlaceholder:''},
+  {v:'my_gy_count_ge',      l:'자신 묘지 카드 수 ≥ N',  hasValue:true,  valuePlaceholder:'장'},
+  {v:'my_hand_count_le',    l:'자신 핸드 수 ≤ N',        hasValue:true,  valuePlaceholder:'장'},
+  {v:'took_battle_damage',  l:'전투 데미지를 받은 직후', hasValue:false, valuePlaceholder:''},
+];
+
+function renderBuiltinConditionRow(bc, ei, bi) {
+  const typeDef = BUILTIN_COND_TYPES.find(t=>t.v===bc.type) || BUILTIN_COND_TYPES[0];
+  return `<div style="display:grid;grid-template-columns:1fr ${typeDef.hasValue?'80px':''} 1fr 28px;gap:0.3rem;align-items:center">
+    <select class="form-select" style="font-size:0.75rem" onchange="updateBuiltinCondition(${ei},${bi},'type',this.value)">
+      ${BUILTIN_COND_TYPES.map(t=>`<option value="${t.v}" ${bc.type===t.v?'selected':''}>${t.l}</option>`).join('')}
+    </select>
+    ${typeDef.hasValue
+      ? `<input class="form-input" type="number" min="0" style="font-size:0.75rem" value="${bc.value||0}"
+           oninput="updateBuiltinCondition(${ei},${bi},'value',+this.value)" placeholder="${typeDef.valuePlaceholder}">`
+      : ''}
+    <input class="form-input" style="font-size:0.72rem" value="${bc.failReason||''}"
+      oninput="updateBuiltinCondition(${ei},${bi},'failReason',this.value)"
+      placeholder="실패 메시지 (예: LP 2000 이하 필요)">
+    <button class="action-del" onclick="removeBuiltinCondition(${ei},${bi})">✕</button>
+  </div>`;
+}
+
+function addBuiltinCondition(ei) {
+  if(!S.editingCard.effects[ei].builtinConditions) S.editingCard.effects[ei].builtinConditions = [];
+  S.editingCard.effects[ei].builtinConditions.push({type:'my_lp_le', value:2000, failReason:''});
+  render();
+}
+function removeBuiltinCondition(ei, bi) {
+  S.editingCard.effects[ei].builtinConditions.splice(bi, 1);
+  render();
+}
+function updateBuiltinCondition(ei, bi, field, value) {
+  if(!S.editingCard.effects[ei].builtinConditions) return;
+  S.editingCard.effects[ei].builtinConditions[bi][field] = value;
+}
+
+function renderActionRow(act, ei, ai, part) {
+  const actDef = ACTION_TYPES.find(a=>a.v===act.type) || ACTION_TYPES[0];
+  return `<div class="action-row">
+    <select class="form-select" style="font-size:0.75rem" onchange="updateAction(${ei},'${part}',${ai},'type',this.value)">
+      ${ACTION_TYPES.map(a=>`<option value="${a.v}" ${act.type===a.v?'selected':''}>${a.l}</option>`).join('')}
+    </select>
+    ${actDef.hasTarget ? `<select class="form-select" style="font-size:0.75rem" onchange="updateAction(${ei},'${part}',${ai},'target',this.value)">
+      ${TARGET_TYPES.map(t=>`<option value="${t.v}" ${act.target===t.v?'selected':''}>${t.l}</option>`).join('')}
+    </select>` : `<div></div>`}
+    ${actDef.hasValue ? `<input class="form-input" type="number" style="font-size:0.75rem" value="${act.value||0}"
+      oninput="updateAction(${ei},'${part}',${ai},'value',+this.value)" placeholder="${actDef.valueLabel||'값'}">` : `<div></div>`}
+    <button class="action-del" onclick="removeAction(${ei},'${part}',${ai})">✕</button>
+  </div>`;
+}
+
+function renderRestrictions() {
+  return `
+  <div class="page-header">
+    <div><div class="page-title">제한 카드 설정</div>
+    <div class="page-sub">금지/제한/준제한 설정. 덱 빌더에서 자동 반영됩니다.</div></div>
+    <button class="btn btn-success" onclick="saveRestrictions()">저장</button>
+  </div>
+  <div class="restriction-grid">
+    ${S.cards.map(c => {
+      const rest = S.restrictions[c.id] || '';
+      const frameColor = c.frameColor || getFrameColor(c);
+      return `<div class="restriction-card">
+        <div class="rest-card-header">
+          <span class="rest-card-icon">${c.image||'?'}</span>
+          <div>
+            <div class="rest-card-name">${c.name}</div>
+            <div style="font-size:0.7rem;color:var(--muted)">${c.type} / Lv.${c.level||'-'}</div>
+          </div>
+        </div>
+        <select class="rest-select" onchange="S.restrictions['${c.id}']=this.value">
+          <option value="" ${!rest?'selected':''}>제한 없음</option>
+          <option value="semi" ${rest==='semi'?'selected':''}>준제한 (2장)</option>
+          <option value="limited" ${rest==='limited'?'selected':''}>제한 (1장)</option>
+          <option value="forbidden" ${rest==='forbidden'?'selected':''}>금지 (0장)</option>
+        </select>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+function renderExport() {
+  const json = JSON.stringify(S.cards, null, 2);
+  return `
+  <div class="page-header">
+    <div><div class="page-title">내보내기 / 불러오기</div>
+    <div class="page-sub">카드 데이터를 JSON으로 관리합니다.</div></div>
+  </div>
+  <div style="display:grid;gap:1.5rem">
+    <div class="form-section">
+      <div class="form-section-title">카드 데이터 내보내기</div>
+      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:0.8rem">
+        현재 카드 풀 전체를 JSON으로 복사하거나 파일로 다운로드합니다.
+      </p>
+      <textarea class="json-editor" rows="12" readonly>${json}</textarea>
+      <div style="display:flex;gap:0.5rem;margin-top:0.8rem">
+        <button class="btn btn-secondary" onclick="copyJson()">클립보드 복사</button>
+        <button class="btn btn-primary" onclick="downloadJson()">JSON 다운로드</button>
+      </div>
+    </div>
+    <div class="form-section">
+      <div class="form-section-title">카드 데이터 불러오기</div>
+      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:0.8rem">
+        ⚠️ 기존 카드 데이터를 덮어씁니다. 신중하게 사용하세요.
+      </p>
+      <textarea class="json-editor" id="importJson" rows="10" placeholder='[{"id":"m001","name":"..."}]'></textarea>
+      <div style="display:flex;gap:0.5rem;margin-top:0.8rem">
+        <button class="btn btn-danger" onclick="importJson()">불러오기 (덮어쓰기)</button>
+        <button class="btn btn-secondary" onclick="resetToDefault()">기본값으로 초기화</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ─── ACTIONS ──────────────────────────────────────────────
+function tryLogin() {
+  const pw = document.getElementById('adminPw')?.value;
+  if (pw === ADMIN_PASSWORD) {
+    DB.setAdmin(true);
+    S.page = 'dashboard';
+    S.loginError = '';
+  } else {
+    S.loginError = '비밀번호가 올바르지 않습니다.';
+  }
+  render();
+}
+
+function logout() {
+  DB.setAdmin(false);
+  S.page = 'login';
+  render();
+}
+
+function goPage(p) { S.page = p; S.editingCard = null; render(); }
+
+function newCard() {
+  S.editingCard = {
+    id: 'm' + Date.now(),
+    name: '', type: 'monster', subtype: 'effect',
+    attribute: 'DARK', race: '전사족', level: 4,
+    atk: 1500, def: 1000,
+    desc: '', effects: [], image: '⚔️', rarity: 'common',
+    frameColor: '#c06a0a',
+  };
+  S.isNew = true;
+  render();
+}
+
+function editCard(id) {
+  const card = S.cards.find(c => c.id === id);
+  if (!card) return;
+  S.editingCard = JSON.parse(JSON.stringify(card)); // deep copy
+  S.isNew = false;
+  render();
+}
+
+function cancelEdit() { S.editingCard = null; render(); }
+
+function updateImagePreview(val) {
+  const input = document.getElementById('img-input');
+  const previewDiv = document.getElementById('img-preview');
+  const previewImg = document.getElementById('img-preview-el');
+  if (!previewDiv || !previewImg) return;
+  if (val && val.startsWith('http')) {
+    previewImg.src = val;
+    previewImg.style.display = 'block';
+    previewDiv.style.display = 'block';
+  } else {
+    previewImg.style.display = 'none';
+    previewDiv.style.display = 'none';
+  }
+}
+
+function loadImageFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  // 파일 크기 제한 (200KB)
+  if (file.size > 200 * 1024) {
+    showToast('이미지 파일은 200KB 이하여야 합니다.', 'error');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUrl = e.target.result;
+    updateEdit('image', dataUrl);
+    const imgInput = document.getElementById('img-input');
+    if (imgInput) imgInput.value = dataUrl.slice(0, 60) + '...';
+    // 미리보기 업데이트
+    const previewImg = document.getElementById('img-preview-el');
+    const previewDiv = document.getElementById('img-preview');
+    if (previewImg) { previewImg.src = dataUrl; previewImg.style.display = 'block'; }
+    if (previewDiv) previewDiv.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function updateEdit(field, value) {
+  S.editingCard[field] = value;
+  // Re-render preview parts
+  const previewEl = document.querySelector('.card-preview');
+  if (previewEl) {
+    const c = S.editingCard;
+    const fc = c.frameColor || getFrameColor(c);
+    previewEl.innerHTML = `
+      <div class="preview-card" style="border-color:${fc};background:linear-gradient(180deg,${fc}33,${fc}11)">
+        <div class="preview-frame-top" style="background:${fc}cc">
+          <span>${c.name||'카드 이름'}</span>
+          ${c.type==='monster'?`<span>${'★'.repeat(Math.min(c.level||0,8))}</span>`:''}
+        </div>
+        <div class="preview-image">${(()=>{const img=c.image||'?';const isUrl=img.startsWith('http')||img.startsWith('data:');return isUrl?`<img src="${img}" style="max-width:100%;max-height:100%;object-fit:cover;border-radius:2px">` : `<span style="font-size:${img.length>2?'2.2rem':'3rem'}">${img}</span>`;})()}</div>
+        <div class="preview-frame-bot" style="background:${fc}44">
+          ${c.type==='monster'?`<span>ATK ${c.atk??0}</span><span>DEF ${c.def??0}</span>`:`<span>${c.subtype||''}</span><span></span>`}
+        </div>
+      </div>
+      <div class="preview-name">${c.name||'이름 없음'}</div>
+      <div class="preview-sub">${c.type==='monster'?`Lv.${c.level||0} ${c.attribute||''} / ${c.race||''}`:c.type==='spell'?'마법 카드':'함정 카드'}</div>
+      <div style="margin-top:0.6rem;font-size:0.68rem;color:var(--muted);line-height:1.5;text-align:left">
+        ${(c.desc||'').slice(0,120)}${(c.desc||'').length>120?'...':''}
+      </div>`;
+  }
+}
+
+function saveCard() {
+  const c = S.editingCard;
+  if (!c.name.trim()) { showToast('카드 이름을 입력하세요.', 'error'); return; }
+  if (!c.id.trim()) { showToast('카드 ID를 입력하세요.', 'error'); return; }
+
+  if (S.isNew) {
+    if (S.cards.find(x => x.id === c.id)) {
+      showToast('이미 존재하는 ID입니다.', 'error'); return;
+    }
+    S.cards.push(c);
+  } else {
+    const idx = S.cards.findIndex(x => x.id === c.id);
+    if (idx > -1) S.cards[idx] = c;
+  }
+  DB.setCards(S.cards);
+  S.cardIndex = buildCardIndex(S.cards);
+  S.editingCard = null;
+  showToast('저장완료!', 'success');
+  render();
+}
+
+function deleteCard(id) {
+  if (!confirm('정말 삭제하시겠습니까?')) return;
+  S.cards = S.cards.filter(c => c.id !== id);
+  DB.setCards(S.cards);
+  S.cardIndex = buildCardIndex(S.cards);
+  showToast('삭제됨.', 'success');
+  render();
+}
+
+// Effect editor actions
+function addEffect() {
+  if (!S.editingCard.effects) S.editingCard.effects = [];
+  S.editingCard.effects.push({
+    id: 'e_' + Date.now(),
+    trigger: 'on_summon',
+    condition: null,
+    actions: [],
+    cost: [],
+    once: false,
+    description: '',
+  });
+  render();
+}
+
+function removeEffect(idx) {
+  S.editingCard.effects.splice(idx, 1);
+  render();
+}
+
+function updateEffect(effIdx, field, value) {
+  S.editingCard.effects[effIdx][field] = value;
+}
+
+function addAction(effIdx, part) {
+  if (!S.editingCard.effects[effIdx][part]) S.editingCard.effects[effIdx][part] = [];
+  S.editingCard.effects[effIdx][part].push({ type: 'draw', target: 'player', value: 1 });
+  render();
+}
+
+function removeAction(effIdx, part, actIdx) {
+  S.editingCard.effects[effIdx][part].splice(actIdx, 1);
+  render();
+}
+
+function updateAction(effIdx, part, actIdx, field, value) {
+  S.editingCard.effects[effIdx][part][actIdx][field] = value;
+}
+
+// Restrictions
+function saveRestrictions() {
+  // Clean empty values
+  const r = {};
+  Object.entries(S.restrictions).forEach(([k,v]) => { if (v) r[k] = v; });
+  S.restrictions = r;
+  DB.setRestrictions(r);
+  showToast('제한 카드 설정 저장완료!', 'success');
+}
+
+// Export/Import
+function copyJson() {
+  navigator.clipboard.writeText(JSON.stringify(S.cards, null, 2));
+  showToast('클립보드에 복사됨!', 'success');
+}
+
+function downloadJson() {
+  const blob = new Blob([JSON.stringify(S.cards, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'duel-arena-cards.json';
+  a.click();
+}
+
+function importJson() {
+  try {
+    const text = document.getElementById('importJson').value;
+    const data = JSON.parse(text);
+    if (!Array.isArray(data)) throw new Error('배열이어야 합니다');
+    if (!confirm(`${data.length}장의 카드를 불러옵니다. 기존 데이터가 덮어써집니다.`)) return;
+    S.cards = data;
+    DB.setCards(data);
+    S.cardIndex = buildCardIndex(data);
+    showToast(`${data.length}장 불러옴!`, 'success');
+    render();
+  } catch(e) {
+    showToast('JSON 형식 오류: ' + e.message, 'error');
+  }
+}
+
+function resetToDefault() {
+  if (!confirm('기본 카드로 초기화합니다. 모든 변경사항이 사라집니다.')) return;
+  DB.setCards(null);
+  localStorage.removeItem(DB.KEYS.CARDS);
+  S.cards = DEFAULT_CARDS;
+  S.cardIndex = buildCardIndex(DEFAULT_CARDS);
+  showToast('기본값으로 초기화됨!', 'success');
+  render();
+}
+
+// Toast notification
+function showToast(msg, type='success') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span>${type==='success'?'✓':'⚠'}</span><span>${msg}</span>`;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// ─── START ────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>

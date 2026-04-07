@@ -1,0 +1,2187 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>遊☆戯☆王 DUEL ARENA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #c9a84c;
+    --gold-light: #f0d080;
+    --gold-dark: #8a6a20;
+    --dark-bg: #0a0a12;
+    --dark-card: #12121e;
+    --dark-panel: #0e0e1a;
+    --dark-border: #1e1e30;
+    --dark-hover: #1a1a28;
+    --red: #cc2244;
+    --blue: #2244cc;
+    --purple: #8822cc;
+    --green: #22aa44;
+    --text-primary: #e8e0cc;
+    --text-muted: #8a8070;
+    --text-gold: #c9a84c;
+    --trap-bg: #3a0a3a;
+    --spell-bg: #0a2a1a;
+    --monster-bg: #1a1a0a;
+    --shadow-gold: 0 0 20px rgba(201,168,76,0.3);
+    --lp-player: #2244cc;
+    --lp-enemy: #cc2244;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--dark-bg);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  #app { min-height: 100vh; }
+
+  /* ===== STAR BACKGROUND ===== */
+  .star-bg {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(ellipse at 20% 50%, rgba(34,68,204,0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 50%, rgba(136,34,204,0.08) 0%, transparent 50%),
+      var(--dark-bg);
+  }
+
+  /* ===== TITLE SCREEN ===== */
+  .title-screen {
+    position: relative; z-index: 1;
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 2rem;
+    padding: 2rem;
+  }
+  .title-logo {
+    font-family: 'Cinzel Decorative', cursive;
+    font-size: clamp(2rem, 6vw, 4.5rem);
+    font-weight: 900;
+    color: var(--gold);
+    text-shadow: 0 0 40px rgba(201,168,76,0.6), 0 0 80px rgba(201,168,76,0.2);
+    text-align: center;
+    letter-spacing: 0.05em;
+    line-height: 1.1;
+    animation: titlePulse 3s ease-in-out infinite;
+  }
+  .title-sub {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(0.8rem, 2vw, 1.2rem);
+    color: var(--text-muted);
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+  }
+  @keyframes titlePulse {
+    0%, 100% { text-shadow: 0 0 40px rgba(201,168,76,0.6), 0 0 80px rgba(201,168,76,0.2); }
+    50% { text-shadow: 0 0 60px rgba(201,168,76,0.9), 0 0 120px rgba(201,168,76,0.4); }
+  }
+  .title-eye {
+    width: 120px; height: 120px;
+    border: 2px solid var(--gold);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 3rem;
+    box-shadow: var(--shadow-gold), inset 0 0 30px rgba(201,168,76,0.1);
+    animation: eyeRotate 8s linear infinite;
+    position: relative;
+  }
+  .title-eye::before {
+    content: '';
+    position: absolute;
+    width: 140px; height: 140px;
+    border: 1px solid rgba(201,168,76,0.3);
+    border-radius: 50%;
+    animation: eyeRotate 12s linear infinite reverse;
+  }
+  @keyframes eyeRotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  .title-menu {
+    display: flex; flex-direction: column; gap: 1rem;
+    width: 100%; max-width: 340px;
+  }
+  .btn-gold {
+    background: linear-gradient(135deg, var(--gold-dark), var(--gold), var(--gold-dark));
+    color: #0a0a0a;
+    border: none;
+    padding: 0.9rem 2rem;
+    font-family: 'Cinzel', serif;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+  .btn-gold:hover {
+    background: linear-gradient(135deg, var(--gold), var(--gold-light), var(--gold));
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(201,168,76,0.5);
+  }
+  .btn-outline {
+    background: transparent;
+    color: var(--gold);
+    border: 1px solid var(--gold);
+    padding: 0.8rem 2rem;
+    font-family: 'Cinzel', serif;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+  .btn-outline:hover {
+    background: rgba(201,168,76,0.1);
+    box-shadow: var(--shadow-gold);
+  }
+
+  /* ===== DECK BUILDER ===== */
+  .deck-builder {
+    position: relative; z-index: 1;
+    min-height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    grid-template-columns: 1fr 380px;
+    gap: 0;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1rem;
+  }
+  .deck-header {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--dark-border);
+    margin-bottom: 1rem;
+  }
+  .deck-header h1 {
+    font-family: 'Cinzel Decorative', cursive;
+    font-size: 1.4rem;
+    color: var(--gold);
+  }
+  .card-search-panel {
+    padding: 0 1rem 0 0;
+    display: flex; flex-direction: column; gap: 1rem;
+  }
+  .search-bar {
+    display: flex; gap: 0.5rem;
+  }
+  .search-input {
+    flex: 1;
+    background: var(--dark-card);
+    border: 1px solid var(--dark-border);
+    color: var(--text-primary);
+    padding: 0.6rem 1rem;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-input:focus { border-color: var(--gold); }
+  .search-input::placeholder { color: var(--text-muted); }
+  .filter-row {
+    display: flex; gap: 0.5rem; flex-wrap: wrap;
+  }
+  .filter-btn {
+    background: var(--dark-card);
+    border: 1px solid var(--dark-border);
+    color: var(--text-muted);
+    padding: 0.3rem 0.8rem;
+    font-size: 0.75rem;
+    font-family: 'Noto Sans KR', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .filter-btn.active, .filter-btn:hover {
+    border-color: var(--gold);
+    color: var(--gold);
+    background: rgba(201,168,76,0.08);
+  }
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 6px;
+    overflow-y: auto;
+    max-height: calc(100vh - 220px);
+    padding-right: 4px;
+  }
+  .card-grid::-webkit-scrollbar { width: 4px; }
+  .card-grid::-webkit-scrollbar-track { background: var(--dark-bg); }
+  .card-grid::-webkit-scrollbar-thumb { background: var(--dark-border); }
+
+  /* ===== CARD MINI ===== */
+  .card-mini {
+    position: relative;
+    cursor: pointer;
+    border: 1px solid var(--dark-border);
+    border-radius: 3px;
+    overflow: hidden;
+    transition: all 0.15s;
+    aspect-ratio: 59/86;
+    background: var(--dark-card);
+  }
+  .card-mini:hover {
+    border-color: var(--gold);
+    transform: translateY(-2px) scale(1.05);
+    z-index: 10;
+    box-shadow: var(--shadow-gold);
+  }
+  .card-mini img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .card-mini .card-count {
+    position: absolute; bottom: 2px; right: 2px;
+    background: rgba(0,0,0,0.8);
+    color: var(--gold);
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 2px;
+    font-family: 'Cinzel', serif;
+  }
+  .card-mini .card-type-badge {
+    position: absolute; top: 2px; left: 2px;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+  .badge-monster { background: #f0c040; }
+  .badge-spell { background: #10a080; }
+  .badge-trap { background: #b040b0; }
+
+  /* ===== DECK PANEL ===== */
+  .deck-panel {
+    background: var(--dark-panel);
+    border: 1px solid var(--dark-border);
+    border-radius: 4px;
+    padding: 1rem;
+    display: flex; flex-direction: column; gap: 1rem;
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+  }
+  .deck-section-title {
+    font-family: 'Cinzel', serif;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--dark-border);
+    padding-bottom: 0.4rem;
+    display: flex; justify-content: space-between;
+  }
+  .deck-section-title span { color: var(--gold); }
+  .deck-card-list {
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  .deck-card-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 4px 6px;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    transition: all 0.15s;
+    cursor: pointer;
+  }
+  .deck-card-row:hover {
+    background: var(--dark-hover);
+    border-color: var(--dark-border);
+  }
+  .deck-card-img {
+    width: 28px; height: 40px;
+    object-fit: cover;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .deck-card-name {
+    flex: 1;
+    font-size: 0.75rem;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .deck-card-qty {
+    font-family: 'Cinzel', serif;
+    font-size: 0.8rem;
+    color: var(--gold);
+    font-weight: 700;
+    min-width: 16px;
+    text-align: right;
+  }
+  .deck-card-del {
+    background: none; border: none;
+    color: var(--text-muted);
+    cursor: pointer; font-size: 0.8rem;
+    transition: color 0.15s;
+    padding: 0 2px;
+  }
+  .deck-card-del:hover { color: var(--red); }
+
+  /* ===== CARD DETAIL TOOLTIP ===== */
+  .card-tooltip {
+    position: fixed;
+    z-index: 1000;
+    width: 240px;
+    background: var(--dark-card);
+    border: 1px solid var(--gold);
+    border-radius: 4px;
+    padding: 0;
+    pointer-events: none;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.8), var(--shadow-gold);
+    overflow: hidden;
+  }
+  .tooltip-img {
+    width: 100%;
+    aspect-ratio: 59/86;
+    object-fit: cover;
+  }
+  .tooltip-body { padding: 0.6rem 0.8rem; }
+  .tooltip-name {
+    font-family: 'Cinzel', serif;
+    font-size: 0.8rem;
+    color: var(--gold);
+    font-weight: 600;
+    margin-bottom: 0.3rem;
+    line-height: 1.3;
+  }
+  .tooltip-type { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 0.4rem; }
+  .tooltip-desc {
+    font-size: 0.68rem;
+    color: var(--text-primary);
+    line-height: 1.5;
+    max-height: 80px;
+    overflow-y: auto;
+  }
+  .tooltip-stats {
+    display: flex; gap: 1rem; margin-top: 0.4rem;
+    font-family: 'Cinzel', serif;
+    font-size: 0.75rem;
+  }
+  .tooltip-atk { color: #f04040; }
+  .tooltip-def { color: #4080f0; }
+
+  /* ===== DUEL BOARD ===== */
+  .duel-screen {
+    position: relative; z-index: 1;
+    min-height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0.5rem;
+    gap: 0.5rem;
+  }
+  .duel-top-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.5rem 1rem;
+    background: var(--dark-panel);
+    border: 1px solid var(--dark-border);
+    border-radius: 4px;
+  }
+  .lp-display {
+    display: flex; align-items: center; gap: 0.8rem;
+  }
+  .lp-name {
+    font-family: 'Cinzel', serif;
+    font-size: 0.85rem;
+    letter-spacing: 0.1em;
+  }
+  .lp-bar {
+    width: 200px; height: 8px;
+    background: var(--dark-border);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+  .lp-fill {
+    height: 100%; border-radius: 4px;
+    transition: width 0.5s ease;
+  }
+  .lp-fill.player { background: linear-gradient(90deg, var(--lp-player), #4488ff); }
+  .lp-fill.enemy { background: linear-gradient(90deg, #ff4488, var(--lp-enemy)); }
+  .lp-number {
+    font-family: 'Cinzel', serif;
+    font-size: 1rem;
+    font-weight: 700;
+    min-width: 48px;
+  }
+  .lp-number.player { color: #4488ff; }
+  .lp-number.enemy { color: #ff4488; }
+  .phase-display {
+    font-family: 'Cinzel', serif;
+    font-size: 0.9rem;
+    color: var(--gold);
+    letter-spacing: 0.15em;
+    text-align: center;
+  }
+  .turn-display {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-align: center;
+  }
+
+  /* ===== FIELD ===== */
+  .duel-field {
+    display: grid;
+    grid-template-rows: 1fr auto 1fr;
+    gap: 4px;
+  }
+  .field-side {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: 4px;
+  }
+  .field-zones {
+    display: grid;
+    grid-template-columns: 60px 1fr 60px;
+    gap: 4px;
+    align-items: center;
+  }
+  .field-main {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr) 60px 60px;
+    gap: 4px;
+    flex: 1;
+  }
+  .field-main.monster-row { margin-bottom: 2px; }
+  .field-main.spell-row { }
+
+  .zone {
+    aspect-ratio: 59/86;
+    border: 1px solid var(--dark-border);
+    border-radius: 3px;
+    background: rgba(255,255,255,0.02);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.55rem;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .zone:hover { border-color: rgba(201,168,76,0.4); background: rgba(201,168,76,0.03); }
+  .zone.monster-zone { border-color: rgba(240,192,64,0.2); }
+  .zone.spell-zone { border-color: rgba(16,160,128,0.2); }
+  .zone.extra-zone { border-color: rgba(136,34,204,0.3); }
+  .zone.graveyard { border-color: rgba(128,64,64,0.3); }
+  .zone.banish { border-color: rgba(64,64,128,0.3); }
+  .zone.field-card { border-color: rgba(64,128,64,0.3); }
+  .zone.active-target {
+    border-color: var(--gold) !important;
+    box-shadow: 0 0 10px rgba(201,168,76,0.5) !important;
+    animation: targetPulse 0.8s ease-in-out infinite;
+  }
+  @keyframes targetPulse {
+    0%, 100% { box-shadow: 0 0 10px rgba(201,168,76,0.5); }
+    50% { box-shadow: 0 0 20px rgba(201,168,76,0.8); }
+  }
+  .zone-label {
+    font-family: 'Cinzel', serif;
+    font-size: 0.5rem;
+    text-align: center;
+    letter-spacing: 0.05em;
+  }
+  .zone-card {
+    width: 100%; height: 100%;
+    position: relative;
+  }
+  .zone-card img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
+  .zone-card.face-down {
+    background: linear-gradient(135deg, #1a1a3a, #0a0a1a);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem;
+  }
+  .zone-card.defense {
+    transform: rotate(90deg);
+    transform-origin: center;
+  }
+  .card-atk-badge {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: rgba(0,0,0,0.75);
+    font-family: 'Cinzel', serif;
+    font-size: 0.55rem;
+    text-align: center;
+    padding: 1px 0;
+    display: flex; justify-content: space-around;
+  }
+  .atk-val { color: #f06060; }
+  .def-val { color: #6090f0; }
+
+  /* ===== DIVIDER ===== */
+  .field-divider {
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    opacity: 0.3;
+    margin: 2px 0;
+  }
+
+  /* ===== HAND ===== */
+  .hand-area {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 0.5rem;
+    min-height: 80px;
+    background: rgba(255,255,255,0.01);
+    border: 1px solid var(--dark-border);
+    border-radius: 4px;
+  }
+  .hand-card {
+    width: 52px;
+    aspect-ratio: 59/86;
+    cursor: pointer;
+    border: 1px solid var(--dark-border);
+    border-radius: 3px;
+    overflow: hidden;
+    transition: all 0.2s;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .hand-card img { width: 100%; height: 100%; object-fit: cover; }
+  .hand-card:hover {
+    border-color: var(--gold);
+    transform: translateY(-12px) scale(1.1);
+    z-index: 10;
+    box-shadow: var(--shadow-gold);
+  }
+  .hand-card.selected {
+    border-color: var(--gold);
+    transform: translateY(-16px) scale(1.12);
+    box-shadow: 0 0 20px rgba(201,168,76,0.7);
+  }
+  .hand-card.face-down {
+    background: linear-gradient(135deg, #1a1a3a, #0a0a1a);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem;
+  }
+
+  /* ===== ACTION PANEL ===== */
+  .action-panel {
+    display: flex; gap: 0.5rem; align-items: center;
+    padding: 0.5rem 1rem;
+    background: var(--dark-panel);
+    border: 1px solid var(--dark-border);
+    border-radius: 4px;
+    flex-wrap: wrap;
+  }
+  .action-log {
+    flex: 1;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-style: italic;
+    min-width: 0;
+  }
+  .action-log .log-entry {
+    color: var(--text-primary);
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .btn-phase {
+    background: rgba(201,168,76,0.1);
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    padding: 0.4rem 1rem;
+    font-family: 'Cinzel', serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .btn-phase:hover {
+    background: rgba(201,168,76,0.2);
+    box-shadow: var(--shadow-gold);
+  }
+  .btn-danger {
+    background: rgba(204,34,68,0.1);
+    border: 1px solid var(--red);
+    color: var(--red);
+    padding: 0.4rem 1rem;
+    font-family: 'Cinzel', serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .btn-danger:hover { background: rgba(204,34,68,0.2); }
+
+  /* ===== CONTEXT MENU ===== */
+  .context-menu {
+    position: fixed;
+    z-index: 2000;
+    background: var(--dark-card);
+    border: 1px solid var(--gold);
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+    min-width: 160px;
+  }
+  .context-item {
+    padding: 0.5rem 1rem;
+    font-family: 'Cinzel', serif;
+    font-size: 0.8rem;
+    color: var(--text-primary);
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: all 0.15s;
+    border-bottom: 1px solid var(--dark-border);
+  }
+  .context-item:last-child { border-bottom: none; }
+  .context-item:hover { background: rgba(201,168,76,0.1); color: var(--gold); }
+
+  /* ===== MODAL ===== */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 3000;
+    display: flex; align-items: center; justify-content: center;
+    padding: 1rem;
+  }
+  .modal-box {
+    background: var(--dark-card);
+    border: 1px solid var(--gold);
+    border-radius: 6px;
+    padding: 1.5rem;
+    max-width: 500px;
+    width: 100%;
+    box-shadow: var(--shadow-gold);
+  }
+  .modal-title {
+    font-family: 'Cinzel Decorative', cursive;
+    font-size: 1.1rem;
+    color: var(--gold);
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+  .modal-content { font-size: 0.9rem; line-height: 1.6; color: var(--text-primary); margin-bottom: 1rem; }
+  .modal-actions { display: flex; gap: 0.5rem; justify-content: center; }
+  .card-select-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+    gap: 6px;
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 1rem;
+  }
+
+  /* ===== DUEL RESULT ===== */
+  .duel-result {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.9);
+    z-index: 4000;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .result-box {
+    text-align: center;
+    animation: resultAppear 0.5s ease;
+  }
+  @keyframes resultAppear {
+    from { opacity: 0; transform: scale(0.5); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .result-title {
+    font-family: 'Cinzel Decorative', cursive;
+    font-size: clamp(2rem, 8vw, 5rem);
+    color: var(--gold);
+    text-shadow: 0 0 60px rgba(201,168,76,0.8);
+    margin-bottom: 1rem;
+  }
+  .result-subtitle {
+    font-family: 'Cinzel', serif;
+    font-size: 1.2rem;
+    color: var(--text-muted);
+    margin-bottom: 2rem;
+  }
+
+  /* ===== LOADING ===== */
+  .loading-screen {
+    position: fixed; inset: 0;
+    background: var(--dark-bg);
+    z-index: 9999;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 1rem;
+  }
+  .loading-ring {
+    width: 60px; height: 60px;
+    border: 3px solid var(--dark-border);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text {
+    font-family: 'Cinzel', serif;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    letter-spacing: 0.2em;
+  }
+
+  /* ===== SIDE ZONES ===== */
+  .side-col {
+    display: flex; flex-direction: column;
+    gap: 4px;
+    justify-content: center;
+  }
+  .deck-zone, .gy-zone, .banish-zone {
+    aspect-ratio: 59/86;
+    width: 56px;
+  }
+  .zone-count {
+    position: absolute; bottom: 2px; right: 2px;
+    background: rgba(0,0,0,0.8);
+    font-family: 'Cinzel', serif;
+    font-size: 0.6rem;
+    color: var(--gold);
+    padding: 1px 3px;
+    border-radius: 2px;
+  }
+
+  /* ===== DAMAGE ANIMATION ===== */
+  .damage-popup {
+    position: fixed;
+    font-family: 'Cinzel Decorative', cursive;
+    font-size: 2rem;
+    font-weight: 900;
+    color: #ff4040;
+    text-shadow: 0 0 20px rgba(255,64,64,0.8);
+    pointer-events: none;
+    animation: damageFloat 1.5s ease-out forwards;
+    z-index: 5000;
+  }
+  @keyframes damageFloat {
+    0% { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-80px) scale(1.5); }
+  }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 768px) {
+    .deck-builder {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto auto auto;
+    }
+    .deck-panel { max-height: 300px; }
+    .lp-bar { width: 100px; }
+  }
+</style>
+</head>
+<body>
+<div class="star-bg"></div>
+<div id="app"></div>
+
+<script>
+// ============================================================
+// GAME STATE & ENGINE
+// ============================================================
+const PHASES = ['DRAW', 'STANDBY', 'MAIN1', 'BATTLE', 'MAIN2', 'END'];
+const PHASE_LABELS = {
+  DRAW: 'DRAW PHASE', STANDBY: 'STANDBY PHASE',
+  MAIN1: 'MAIN PHASE 1', BATTLE: 'BATTLE PHASE',
+  MAIN2: 'MAIN PHASE 2', END: 'END PHASE'
+};
+
+// Card type constants
+const CARD_TYPE = { MONSTER: 'Monster', SPELL: 'Spell Card', TRAP: 'Trap Card' };
+const MONSTER_FRAME = {
+  NORMAL: 'Normal Monster', EFFECT: 'Effect Monster',
+  FUSION: 'Fusion Monster', SYNCHRO: 'Synchro Monster',
+  XYZ: 'XYZ Monster', LINK: 'Link Monster', RITUAL: 'Ritual Monster'
+};
+
+// ============================================================
+// GAME STATE
+// ============================================================
+let G = {
+  screen: 'title', // title | deckbuilder | duel
+  mode: null, // ai | pvp
+  cards: {}, // id -> card data
+  searchResults: [],
+  searchQuery: '',
+  searchFilter: 'all',
+  loading: false,
+  loadingMsg: '',
+
+  playerDeck: [],    // [{id, qty}]
+  playerExtra: [],
+  playerSide: [],
+
+  // Duel state
+  duel: null,
+
+  tooltip: null, // {card, x, y}
+  contextMenu: null,
+  modal: null,
+  result: null,
+  log: [],
+};
+
+// Initial duel state factory
+function createDuelState(playerDeckIds, aiDeckIds) {
+  return {
+    turn: 1,
+    activePlayer: 0, // 0 = player, 1 = AI/opponent
+    phase: 'DRAW',
+    players: [
+      createPlayerState('YOU', playerDeckIds, false),
+      createPlayerState('OPPONENT', aiDeckIds, true),
+    ],
+    chain: [],
+    damageStep: false,
+    normalSummonUsed: false,
+    attackedMonsters: new Set(),
+    battlePhaseEnd: false,
+  };
+}
+
+function createPlayerState(name, deckIds, isAI) {
+  const deck = [...deckIds].sort(() => Math.random() - 0.5);
+  return {
+    name,
+    isAI,
+    lp: 8000,
+    deck,
+    hand: [],
+    monsterZones: [null, null, null, null, null],  // up to 5
+    spellZones: [null, null, null, null, null],
+    fieldZone: null,
+    graveyard: [],
+    banished: [],
+    extraDeck: [],
+  };
+}
+
+function createFieldCard(cardId, pos='ATK', faceUp=true) {
+  return {
+    id: Date.now() + Math.random(),
+    cardId,
+    position: pos, // ATK | DEF
+    faceUp,
+    attacked: false,
+    canAttack: false,
+    gainedControl: false,
+    effectUsed: false,
+  };
+}
+
+// ============================================================
+// CARD DATA / API
+// ============================================================
+let cardCache = {};
+let searchTimeout = null;
+
+async function searchCards(query, filter='all') {
+  G.loading = true;
+  G.loadingMsg = '카드 검색 중...';
+  render();
+
+  try {
+    let url = 'https://db.ygoprodeck.com/api/v7/cardinfo.php?num=20&offset=0&';
+    if (query) url += `&fname=${encodeURIComponent(query)}`;
+    if (filter === 'monster') url += '&type=Effect%20Monster,Normal%20Monster,Fusion%20Monster,Synchro%20Monster,Xyz%20Monster,Link%20Monster,Ritual%20Monster';
+    if (filter === 'spell') url += '&type=Spell%20Card';
+    if (filter === 'trap') url += '&type=Trap%20Card';
+    if (!query && filter === 'all') url += 'fname=Dark';
+
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.data) {
+      G.searchResults = data.data.slice(0, 60);
+      data.data.forEach(c => cardCache[c.id] = c);
+    } else {
+      G.searchResults = [];
+    }
+  } catch(e) {
+    G.searchResults = [];
+  }
+  G.loading = false;
+  render();
+}
+
+async function fetchCardsByIds(ids) {
+  const missing = ids.filter(id => !cardCache[id]);
+  if (missing.length > 0) {
+    try {
+      const url = `https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${missing.join(',')}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.data) data.data.forEach(c => cardCache[c.id] = c);
+    } catch(e) {}
+  }
+}
+
+function getCardImg(cardId, size='small') {
+  const card = cardCache[cardId];
+  if (!card) return '';
+  if (card.card_images && card.card_images[0]) {
+    return size === 'small'
+      ? card.card_images[0].image_url_small || card.card_images[0].image_url
+      : card.card_images[0].image_url;
+  }
+  return '';
+}
+
+function isMonster(card) {
+  if (!card) return false;
+  return card.type && !card.type.includes('Spell') && !card.type.includes('Trap');
+}
+function isSpell(card) { return card && card.type && card.type.includes('Spell'); }
+function isTrap(card) { return card && card.type && card.type.includes('Trap'); }
+function isExtraType(card) {
+  if (!card) return false;
+  return card.type && (card.type.includes('Fusion') || card.type.includes('Synchro')
+    || card.type.includes('Xyz') || card.type.includes('Link'));
+}
+
+// ============================================================
+// BUILT-IN AI DECK (uses popular card IDs)
+// ============================================================
+const AI_DECK_IDS = [
+  46986414,46986414,46986414, // Blue-Eyes White Dragon x3
+  89631139,89631139,89631139, // Blue-Eyes White Dragon (alt)
+  38033121,38033121,38033121, // alternative
+  40737112,40737112,          // Dragon Spirit of White
+  74701381,74701381,74701381, // The White Stone of Ancients
+  32473668,32473668,          // White Stone of Legend
+  17375316,17375316,17375316, // Sage with Eyes of Blue
+  11901678,11901678,11901678, // Trade-In
+  24224830,24224830,          // Cards of Consonance
+  36868108,36868108,36868108, // Dragon Shrine
+  49036338,49036338,49036338, // Pot of Desires
+  83764719,83764719,83764719, // Monster Reborn
+  05318639,05318639,           // Raigeki
+  15341822,15341822,15341822, // Return of the Dragon Lords
+];
+
+// Simple sample starter deck IDs
+const SAMPLE_DECK_IDS = [
+  46986414, 46986414, 46986414, // Blue-Eyes x3
+  89631139,                      // BEW alt
+  74701381, 74701381,            // White Stone x2
+  17375316, 17375316,            // Sage x2
+  11901678, 11901678,            // Trade-In x2
+  36868108, 36868108, 36868108, // Dragon Shrine x3
+  49036338, 49036338, 49036338, // Pot of Desires x3
+  83764719,                      // Monster Reborn
+  05318639,                      // Raigeki
+  15341822, 15341822,            // Return x2
+  44095762, 44095762, 44095762, // Mystical Space Typhoon x3
+  53129443, 53129443, 53129443, // Solemn Strike x3
+  40615939, 40615939,            // Trap Hole x2
+];
+
+// ============================================================
+// DUEL ENGINE FUNCTIONS
+// ============================================================
+function duel() { return G.duel; }
+function activeP() { return duel().players[duel().activePlayer]; }
+function waitingP() { return duel().players[1 - duel().activePlayer]; }
+function player() { return duel().players[0]; }
+function enemy() { return duel().players[1]; }
+
+function addLog(msg, type='normal') {
+  G.log = [{ msg, type, id: Date.now() }, ...G.log.slice(0, 20)];
+}
+
+function drawCard(playerIdx, count=1) {
+  const p = duel().players[playerIdx];
+  for (let i = 0; i < count; i++) {
+    if (p.deck.length === 0) {
+      addLog(`${p.name}의 덱이 없습니다! 듀얼 종료!`, 'danger');
+      endDuel(1 - playerIdx);
+      return;
+    }
+    const cardId = p.deck.shift();
+    p.hand.push(cardId);
+    if (!p.isAI) addLog(`${p.name}이 카드를 드로우했습니다.`);
+  }
+}
+
+function startDuel(mode) {
+  G.mode = mode;
+  const playerIds = G.playerDeck.flatMap(d => Array(d.qty).fill(d.id));
+  const aiIds = [...AI_DECK_IDS].sort(() => Math.random() - 0.5);
+
+  if (playerIds.length < 40) {
+    addLog('덱이 40장 미만입니다. 샘플 덱으로 시작합니다.');
+    const sampleIds = [...SAMPLE_DECK_IDS].sort(() => Math.random() - 0.5);
+    G.duel = createDuelState(sampleIds, aiIds);
+  } else {
+    G.duel = createDuelState(playerIds.sort(() => Math.random() - 0.5), aiIds);
+  }
+
+  G.screen = 'duel';
+  G.log = [];
+
+  // Initial draw: 5 cards each
+  drawCard(0, 5);
+  drawCard(1, 5);
+  addLog('듀얼 시작! 선공은 당신입니다.', 'special');
+
+  // Draw phase: draw 1
+  advancePhase();
+  render();
+}
+
+function advancePhase() {
+  const d = duel();
+  const phases = ['DRAW', 'STANDBY', 'MAIN1', 'BATTLE', 'MAIN2', 'END'];
+  const idx = phases.indexOf(d.phase);
+
+  if (idx < phases.length - 1) {
+    d.phase = phases[idx + 1];
+  } else {
+    // End of turn -> switch player
+    endTurn();
+    return;
+  }
+
+  handlePhaseStart();
+  render();
+  if (activeP().isAI) setTimeout(aiTurn, 600);
+}
+
+function handlePhaseStart() {
+  const d = duel();
+  addLog(`${activeP().name}: ${PHASE_LABELS[d.phase]}`, 'phase');
+
+  if (d.phase === 'DRAW') {
+    if (d.turn > 1 || d.activePlayer === 1) {
+      drawCard(d.activePlayer, 1);
+    }
+  }
+  if (d.phase === 'MAIN1') {
+    d.normalSummonUsed = false;
+    d.attackedMonsters = new Set();
+  }
+  if (d.phase === 'END') {
+    // Hand limit check
+    const p = activeP();
+    if (p.hand.length > 6) {
+      if (!p.isAI) {
+        // Player must discard
+        G.modal = {
+          type: 'discard',
+          count: p.hand.length - 6,
+          selected: [],
+        };
+        render();
+        return;
+      } else {
+        while (p.hand.length > 6) {
+          const discarded = p.hand.splice(0, 1)[0];
+          p.graveyard.push(discarded);
+        }
+      }
+    }
+  }
+}
+
+function endTurn() {
+  const d = duel();
+  d.activePlayer = 1 - d.activePlayer;
+  d.turn++;
+  d.phase = 'DRAW';
+  // Refresh monsters to allow attacks
+  activeP().monsterZones.forEach(z => {
+    if (z) { z.attacked = false; z.canAttack = true; }
+  });
+  handlePhaseStart();
+}
+
+function endDuel(winnerIdx) {
+  const winner = duel().players[winnerIdx];
+  G.result = { winner: winner.name, isPlayer: winnerIdx === 0 };
+  render();
+}
+
+// Normal Summon
+function normalSummon(cardId, zoneIdx) {
+  const d = duel();
+  if (d.normalSummonUsed) { addLog('이미 일반 소환했습니다!'); return; }
+  const card = cardCache[cardId];
+  if (!card || !isMonster(card)) return;
+  if (isExtraType(card)) { addLog('엑스트라 덱 몬스터는 특수 소환이 필요합니다!'); return; }
+
+  const level = card.level || 0;
+  if (level >= 5 && level <= 6) {
+    // Need 1 tribute
+    const monsters = player().monsterZones.filter(z => z !== null);
+    if (monsters.length < 1) { addLog('릴리스가 필요합니다! (레벨 5~6: 1체)'); return; }
+    // Remove first available monster as tribute
+    const tIdx = player().monsterZones.findIndex(z => z !== null);
+    const tributed = player().monsterZones[tIdx];
+    player().graveyard.push(tributed.cardId);
+    player().monsterZones[tIdx] = null;
+    addLog(`${cardCache[tributed.cardId]?.name || '?'}을 릴리스했습니다.`);
+  } else if (level >= 7) {
+    const monsters = player().monsterZones.filter(z => z !== null);
+    if (monsters.length < 2) { addLog('릴리스가 필요합니다! (레벨 7+: 2체)'); return; }
+    let count = 0;
+    for (let i = 0; i < 5 && count < 2; i++) {
+      if (player().monsterZones[i]) {
+        player().graveyard.push(player().monsterZones[i].cardId);
+        player().monsterZones[i] = null;
+        count++;
+      }
+    }
+    addLog(`몬스터 2체를 릴리스했습니다.`);
+  }
+
+  if (player().monsterZones[zoneIdx] !== null) { addLog('해당 존에 이미 몬스터가 있습니다!'); return; }
+
+  const fc = createFieldCard(cardId, 'ATK', true);
+  fc.canAttack = false; // Summoning sickness
+  player().monsterZones[zoneIdx] = fc;
+  // Remove from hand
+  const hIdx = player().hand.indexOf(cardId);
+  if (hIdx > -1) player().hand.splice(hIdx, 1);
+
+  d.normalSummonUsed = true;
+  addLog(`${card.name}을 일반 소환했습니다! ATK:${card.atk}`, 'special');
+  render();
+}
+
+// Set (face down)
+function setCard(cardId, zoneType, zoneIdx) {
+  const card = cardCache[cardId];
+  if (!card) return;
+  const p = player();
+  const hIdx = p.hand.indexOf(cardId);
+  if (hIdx === -1) return;
+
+  if (zoneType === 'monster') {
+    const d = duel();
+    if (d.normalSummonUsed) { addLog('이미 일반 소환했습니다!'); return; }
+    if (card.level >= 5) { addLog('레벨 5+ 몬스터는 세트할 수 없습니다!'); return; }
+    if (p.monsterZones[zoneIdx] !== null) { addLog('이미 차있는 존입니다!'); return; }
+    const fc = createFieldCard(cardId, 'DEF', false);
+    fc.canAttack = false;
+    p.monsterZones[zoneIdx] = fc;
+    d.normalSummonUsed = true;
+    addLog(`몬스터를 세트했습니다.`);
+  } else {
+    if (p.spellZones[zoneIdx] !== null) { addLog('이미 차있는 존입니다!'); return; }
+    const fc = createFieldCard(cardId, 'DEF', false);
+    p.spellZones[zoneIdx] = fc;
+    if (isSpell(card)) {
+      // Activate immediately (simplified - permanent spell)
+      fc.faceUp = true;
+      addLog(`${card.name}을 발동했습니다!`, 'special');
+      applySpellEffect(card, 0);
+    } else {
+      addLog(`함정/마법 카드를 세트했습니다.`);
+    }
+  }
+
+  p.hand.splice(hIdx, 1);
+  render();
+}
+
+function applySpellEffect(card, playerIdx) {
+  const p = duel().players[playerIdx];
+  const opponent = duel().players[1 - playerIdx];
+  const name = card.name || '';
+  const race = card.race || '';
+
+  // Simplified effect handling
+  if (name.includes('Pot of Desires') || name.includes('Pot of Greed')) {
+    drawCard(playerIdx, 2);
+    addLog(`${name}: 카드를 2장 드로우!`);
+  } else if (name.includes('Raigeki')) {
+    opponent.monsterZones = opponent.monsterZones.map(z => {
+      if (z) opponent.graveyard.push(z.cardId);
+      return null;
+    });
+    addLog('Raigeki! 상대 몬스터 전체 파괴!', 'special');
+  } else if (name.includes('Monster Reborn')) {
+    const gy = [...p.graveyard, ...opponent.graveyard];
+    if (gy.length > 0) addLog(`${name}: 묘지에서 1장 특수 소환 가능 (미구현)`);
+  } else if (name.includes('Mystical Space Typhoon') || name.includes('Twin Twisters')) {
+    // Destroy one spell/trap
+    const targets = opponent.spellZones.map((z, i) => ({ z, i })).filter(({ z }) => z !== null);
+    if (targets.length > 0) {
+      const t = targets[0];
+      opponent.graveyard.push(t.z.cardId);
+      opponent.spellZones[t.i] = null;
+      addLog(`${name}: 상대 마법/함정 파괴!`);
+    }
+  }
+}
+
+// Attack
+function declareAttack(attackerZoneIdx, defenderZoneIdx) {
+  const d = duel();
+  const attacker = player().monsterZones[attackerZoneIdx];
+  if (!attacker || !attacker.canAttack || attacker.attacked) {
+    addLog('이 몬스터는 공격할 수 없습니다!');
+    return;
+  }
+
+  const atkCard = cardCache[attacker.cardId];
+  if (!atkCard) return;
+  const atk = atkCard.atk || 0;
+
+  if (defenderZoneIdx === -1) {
+    // Direct attack
+    if (enemy().monsterZones.some(z => z !== null)) {
+      addLog('직접 공격은 상대 몬스터가 없을 때만 가능합니다!');
+      return;
+    }
+    enemy().lp = Math.max(0, enemy().lp - atk);
+    addLog(`${atkCard.name}의 직접 공격! 상대에게 ${atk} 데미지!`, 'special');
+    showDamage(atk, 'enemy');
+    attacker.attacked = true;
+    attacker.canAttack = false;
+    if (enemy().lp === 0) endDuel(0);
+  } else {
+    const defender = enemy().monsterZones[defenderZoneIdx];
+    if (!defender) { addLog('타겟이 없습니다!'); return; }
+    const defCard = cardCache[defender.cardId];
+    if (!defCard) return;
+
+    if (defender.position === 'ATK' && defender.faceUp) {
+      const def = defCard.atk || 0;
+      if (atk > def) {
+        const diff = atk - def;
+        enemy().lp = Math.max(0, enemy().lp - diff);
+        enemy().graveyard.push(defender.cardId);
+        enemy().monsterZones[defenderZoneIdx] = null;
+        addLog(`${atkCard.name} vs ${defCard.name}: 전투 승리! 상대 ${diff} 데미지`, 'special');
+        showDamage(diff, 'enemy');
+        if (enemy().lp === 0) endDuel(0);
+      } else if (atk === def) {
+        enemy().graveyard.push(defender.cardId);
+        enemy().monsterZones[defenderZoneIdx] = null;
+        player().graveyard.push(attacker.cardId);
+        player().monsterZones[attackerZoneIdx] = null;
+        addLog(`${atkCard.name} vs ${defCard.name}: 상호 파괴!`, 'special');
+      } else {
+        const diff = def - atk;
+        player().lp = Math.max(0, player().lp - diff);
+        addLog(`${atkCard.name} vs ${defCard.name}: 전투 패배! ${diff} 데미지`, 'danger');
+        showDamage(diff, 'player');
+        if (player().lp === 0) endDuel(1);
+      }
+    } else {
+      // Defender in DEF position
+      const def = defCard.def || 0;
+      if (!defender.faceUp) {
+        defender.faceUp = true;
+        addLog(`${defCard.name}이 표측으로!`);
+      }
+      if (atk > def) {
+        enemy().graveyard.push(defender.cardId);
+        enemy().monsterZones[defenderZoneIdx] = null;
+        addLog(`${atkCard.name}이 수비 몬스터를 파괴!`);
+      } else {
+        addLog(`${atkCard.name}의 공격이 실패! (ATK ${atk} vs DEF ${def})`);
+      }
+    }
+    attacker.attacked = true;
+    attacker.canAttack = false;
+  }
+  render();
+}
+
+function showDamage(amount, target) {
+  const el = document.createElement('div');
+  el.className = 'damage-popup';
+  el.textContent = `-${amount}`;
+  el.style.left = target === 'enemy' ? '60%' : '40%';
+  el.style.top = target === 'enemy' ? '25%' : '70%';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1500);
+}
+
+// ============================================================
+// AI ENGINE
+// ============================================================
+function aiTurn() {
+  if (!G.duel || G.screen !== 'duel') return;
+  const d = duel();
+  if (!activeP().isAI) return;
+
+  const phase = d.phase;
+
+  if (phase === 'DRAW' || phase === 'STANDBY') {
+    setTimeout(advancePhase, 400);
+    return;
+  }
+
+  if (phase === 'MAIN1') {
+    aiPlayCards();
+    setTimeout(() => {
+      advancePhase(); // to BATTLE
+    }, 800);
+    return;
+  }
+
+  if (phase === 'BATTLE') {
+    aiAttack();
+    setTimeout(() => advancePhase(), 800); // to MAIN2
+    return;
+  }
+
+  if (phase === 'MAIN2') {
+    setTimeout(() => advancePhase(), 400); // to END
+    return;
+  }
+
+  if (phase === 'END') {
+    // Discard if hand > 6
+    while (enemy().hand.length > 6) {
+      const discarded = enemy().hand.shift();
+      enemy().graveyard.push(discarded);
+    }
+    setTimeout(() => advancePhase(), 400);
+    return;
+  }
+}
+
+function aiPlayCards() {
+  const p = enemy();
+  // Try to summon a monster
+  const monstersInHand = p.hand.filter(id => {
+    const c = cardCache[id];
+    return c && isMonster(c) && !isExtraType(c) && (c.level || 0) <= 4;
+  });
+
+  if (monstersInHand.length > 0 && !duel().normalSummonUsed) {
+    const cardId = monstersInHand.reduce((best, id) => {
+      const c = cardCache[id];
+      const b = cardCache[best];
+      return (c?.atk || 0) > (b?.atk || 0) ? id : best;
+    });
+    const zoneIdx = p.monsterZones.findIndex(z => z === null);
+    if (zoneIdx > -1) {
+      const fc = createFieldCard(cardId, 'ATK', true);
+      fc.canAttack = true;
+      p.monsterZones[zoneIdx] = fc;
+      const hIdx = p.hand.indexOf(cardId);
+      if (hIdx > -1) p.hand.splice(hIdx, 1);
+      duel().normalSummonUsed = true;
+      addLog(`${p.name}이 ${cardCache[cardId]?.name || '?'}을 소환!`, 'enemy');
+    }
+  }
+
+  // Set a spell/trap
+  const stInHand = p.hand.filter(id => {
+    const c = cardCache[id];
+    return c && (isSpell(c) || isTrap(c));
+  });
+  if (stInHand.length > 0) {
+    const cardId = stInHand[0];
+    const zoneIdx = p.spellZones.findIndex(z => z === null);
+    if (zoneIdx > -1) {
+      const card = cardCache[cardId];
+      const fc = createFieldCard(cardId, 'DEF', isSpell(card));
+      p.spellZones[zoneIdx] = fc;
+      const hIdx = p.hand.indexOf(cardId);
+      if (hIdx > -1) p.hand.splice(hIdx, 1);
+      if (isSpell(card)) {
+        addLog(`${p.name}이 ${card.name} 발동!`, 'enemy');
+        applySpellEffect(card, 1);
+      } else {
+        addLog(`${p.name}이 카드를 세트.`, 'enemy');
+      }
+    }
+  }
+  render();
+}
+
+function aiAttack() {
+  const p = enemy();
+  const attackers = p.monsterZones.filter(z => z !== null);
+
+  attackers.forEach((attacker, relIdx) => {
+    const zoneIdx = p.monsterZones.indexOf(attacker);
+    if (!attacker.canAttack) return;
+    const atkCard = cardCache[attacker.cardId];
+    if (!atkCard) return;
+    const atk = atkCard.atk || 0;
+
+    const targets = player().monsterZones.map((z, i) => ({ z, i })).filter(({ z }) => z !== null);
+
+    if (targets.length === 0) {
+      // Direct attack
+      player().lp = Math.max(0, player().lp - atk);
+      addLog(`${p.name}의 ${atkCard.name} 직접 공격! ${atk} 데미지!`, 'danger');
+      showDamage(atk, 'player');
+      attacker.attacked = true;
+      attacker.canAttack = false;
+      if (player().lp === 0) { endDuel(1); return; }
+    } else {
+      // Attack weakest monster
+      const target = targets.reduce((weak, cur) => {
+        const wCard = cardCache[weak.z.cardId];
+        const cCard = cardCache[cur.z.cardId];
+        const wVal = weak.z.position === 'ATK' ? (wCard?.atk || 0) : (wCard?.def || 0);
+        const cVal = cur.z.position === 'ATK' ? (cCard?.atk || 0) : (cCard?.def || 0);
+        return cVal < wVal ? cur : weak;
+      });
+
+      const defCard = cardCache[target.z.cardId];
+      if (!defCard) return;
+
+      if (target.z.position === 'ATK' && target.z.faceUp) {
+        const def = defCard.atk || 0;
+        if (atk >= def) {
+          if (atk > def) {
+            const diff = atk - def;
+            player().lp = Math.max(0, player().lp - diff);
+            showDamage(diff, 'player');
+            addLog(`${p.name}: ${atkCard.name} vs ${defCard.name}! ${diff} 데미지!`, 'danger');
+            if (player().lp === 0) { endDuel(1); return; }
+          } else {
+            addLog(`${p.name}: ${atkCard.name} vs ${defCard.name}! 상호 파괴!`);
+            player().graveyard.push(target.z.cardId);
+          }
+          player().graveyard.push(attacker.cardId);
+          player().monsterZones[target.i] = null;
+          p.monsterZones[zoneIdx] = null;
+        } else {
+          const diff = def - atk;
+          player().lp = Math.max(0, player().lp - diff);
+          // Actually enemy takes reflection damage - let's simplify
+          addLog(`${p.name}의 공격 실패! 반사 데미지 없음 (간소화)`);
+        }
+      } else {
+        // DEF position
+        if (!target.z.faceUp) {
+          target.z.faceUp = true;
+          addLog(`${defCard.name} 표측으로!`);
+        }
+        const def = defCard.def || 0;
+        if (atk > def) {
+          player().graveyard.push(target.z.cardId);
+          player().monsterZones[target.i] = null;
+          addLog(`${p.name}이 ${defCard.name} 파괴!`);
+        } else {
+          addLog(`${p.name}의 공격 방어됨 (ATK ${atk} vs DEF ${def})`);
+        }
+      }
+      attacker.attacked = true;
+      attacker.canAttack = false;
+    }
+  });
+  render();
+}
+
+// ============================================================
+// UI STATE
+// ============================================================
+let selectedHandCard = null;     // index in hand
+let attackingMonster = null;     // { zoneIdx }
+
+// ============================================================
+// RENDER ENGINE
+// ============================================================
+function render() {
+  const app = document.getElementById('app');
+  if (!app) return;
+
+  if (G.loading && G.screen === 'title') {
+    app.innerHTML = renderLoading();
+    return;
+  }
+
+  let html = '';
+  if (G.screen === 'title') html = renderTitle();
+  else if (G.screen === 'deckbuilder') html = renderDeckBuilder();
+  else if (G.screen === 'duel') html = renderDuel();
+
+  app.innerHTML = html;
+  attachEvents();
+
+  if (G.result) renderResult();
+}
+
+function renderLoading() {
+  return `<div class="loading-screen">
+    <div class="loading-ring"></div>
+    <div class="loading-text">${G.loadingMsg || 'LOADING...'}</div>
+  </div>`;
+}
+
+function renderTitle() {
+  return `<div class="title-screen">
+    <div class="title-eye">👁</div>
+    <div>
+      <div class="title-logo">DUEL ARENA</div>
+      <div class="title-sub">Yu-Gi-Oh! Web Edition</div>
+    </div>
+    <div class="title-menu">
+      <button class="btn-gold" onclick="goToDeckBuilder()">덱 빌더</button>
+      <button class="btn-gold" onclick="quickDuel('ai')">빠른 듀얼 (vs AI)</button>
+      <button class="btn-outline" onclick="showPvPModal()">PvP 대전 (Coming Soon)</button>
+    </div>
+  </div>`;
+}
+
+function renderDeckBuilder() {
+  const total = G.playerDeck.reduce((s, d) => s + d.qty, 0);
+  const extra = G.playerExtra.reduce((s, d) => s + d.qty, 0);
+
+  return `<div class="deck-builder">
+    <div class="deck-header">
+      <h1>⚔ 덱 빌더</h1>
+      <div style="display:flex;gap:0.5rem;align-items:center">
+        <span style="font-size:0.8rem;color:var(--text-muted)">메인덱 ${total}/60</span>
+        <button class="btn-outline" style="font-size:0.75rem;padding:0.4rem 0.8rem" onclick="G.screen='title';render()">← 뒤로</button>
+        <button class="btn-gold" style="font-size:0.75rem;padding:0.4rem 0.8rem" onclick="startDuel('ai')">듀얼 시작!</button>
+      </div>
+    </div>
+
+    <div class="card-search-panel">
+      <div class="search-bar">
+        <input class="search-input" id="searchInput" placeholder="카드 이름 검색..." value="${G.searchQuery}"
+          oninput="onSearchInput(this.value)">
+        <button class="btn-gold" style="padding:0.5rem 1rem;font-size:0.8rem" onclick="doSearch()">검색</button>
+      </div>
+      <div class="filter-row">
+        ${['all','monster','spell','trap'].map(f =>
+          `<button class="filter-btn ${G.searchFilter===f?'active':''}" onclick="setFilter('${f}')">${
+            {all:'전체',monster:'몬스터',spell:'마법',trap:'함정'}[f]
+          }</button>`
+        ).join('')}
+      </div>
+      ${G.loading ? '<div style="color:var(--text-muted);font-size:0.8rem;padding:1rem">검색 중...</div>' : ''}
+      <div class="card-grid" id="cardGrid">
+        ${G.searchResults.map(card => renderCardMini(card, true)).join('')}
+      </div>
+    </div>
+
+    <div class="deck-panel">
+      <div class="deck-section-title">메인 덱 <span>${total}</span></div>
+      <div class="deck-card-list">
+        ${G.playerDeck.map(d => renderDeckRow(d)).join('')}
+        ${G.playerDeck.length === 0 ? '<div style="color:var(--text-muted);font-size:0.75rem;text-align:center;padding:1rem">카드를 추가하세요</div>' : ''}
+      </div>
+      <div class="deck-section-title" style="margin-top:0.5rem">엑스트라 덱 <span>${extra}</span></div>
+      <div class="deck-card-list">
+        ${G.playerExtra.map(d => renderDeckRow(d, true)).join('')}
+        ${G.playerExtra.length === 0 ? '<div style="color:var(--text-muted);font-size:0.75rem;text-align:center;padding:0.5rem">없음</div>' : ''}
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderCardMini(card, clickable=false) {
+  const img = card.card_images?.[0]?.image_url_small || '';
+  const type = isMonster(card) ? 'monster' : isSpell(card) ? 'spell' : 'trap';
+  const badgeClass = `badge-${type}`;
+  return `<div class="card-mini" 
+    onclick="${clickable ? `addCardToDeck(${card.id})` : ''}"
+    onmouseenter="showTooltip(event, ${card.id})"
+    onmouseleave="hideTooltip()">
+    ${img ? `<img src="${img}" alt="${card.name}" loading="lazy">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:0.6rem;text-align:center;padding:4px">${card.name}</div>`}
+    <div class="card-type-badge ${badgeClass}"></div>
+  </div>`;
+}
+
+function renderDeckRow(d, isExtra=false) {
+  const card = cardCache[d.id];
+  if (!card) return '';
+  const img = card.card_images?.[0]?.image_url_small || '';
+  return `<div class="deck-card-row"
+    onmouseenter="showTooltip(event, ${d.id})"
+    onmouseleave="hideTooltip()">
+    ${img ? `<img class="deck-card-img" src="${img}" alt="">` : '<div class="deck-card-img" style="background:var(--dark-border)"></div>'}
+    <div class="deck-card-name">${card.name}</div>
+    <div class="deck-card-qty">×${d.qty}</div>
+    <button class="deck-card-del" onclick="addCardToDeck(${d.id}, true)">−</button>
+  </div>`;
+}
+
+function renderDuel() {
+  const d = duel();
+  if (!d) return '';
+  const p = player();
+  const e = enemy();
+  const isMyTurn = d.activePlayer === 0;
+
+  return `<div class="duel-screen">
+    ${renderTopBar(d, p, e)}
+    <div class="duel-field">
+      ${renderEnemySide(e, d)}
+      <div class="field-divider"></div>
+      ${renderPlayerSide(p, d, isMyTurn)}
+    </div>
+    ${renderActionPanel(d, isMyTurn)}
+  </div>
+  ${renderTooltip()}
+  ${renderContextMenu()}
+  ${renderModal()}`;
+}
+
+function renderTopBar(d, p, e) {
+  const pPct = (p.lp / 8000) * 100;
+  const ePct = (e.lp / 8000) * 100;
+  return `<div class="duel-top-bar">
+    <div class="lp-display">
+      <div class="lp-name" style="color:#4488ff">👤 ${p.name}</div>
+      <div class="lp-bar"><div class="lp-fill player" style="width:${pPct}%"></div></div>
+      <div class="lp-number player">${p.lp.toLocaleString()}</div>
+    </div>
+    <div style="text-align:center">
+      <div class="phase-display">${PHASE_LABELS[d.phase]}</div>
+      <div class="turn-display">TURN ${d.turn} · ${activeP().name}</div>
+    </div>
+    <div class="lp-display" style="flex-direction:row-reverse">
+      <div class="lp-name" style="color:#ff4488">🤖 ${e.name}</div>
+      <div class="lp-bar"><div class="lp-fill enemy" style="width:${ePct}%"></div></div>
+      <div class="lp-number enemy">${e.lp.toLocaleString()}</div>
+    </div>
+  </div>`;
+}
+
+function renderEnemySide(e, d) {
+  return `<div class="field-side">
+    <div class="hand-area" style="justify-content:center">
+      ${e.hand.map((_, i) => `<div class="hand-card face-down">🎴</div>`).join('')}
+      ${e.hand.length === 0 ? '<div style="color:var(--text-muted);font-size:0.75rem">핸드 없음</div>' : ''}
+    </div>
+    <div style="display:grid;grid-template-columns:56px 1fr 56px;gap:4px;align-items:start">
+      <div class="side-col">
+        ${renderZone('field-card','필드',null)}
+        ${renderZone('graveyard','묘지',e.graveyard.length, e.graveyard)}
+        ${renderZone('banish','제외',e.banished.length)}
+      </div>
+      <div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-bottom:4px">
+          ${e.spellZones.map((z, i) => renderZoneCard(z, 'enemy-spell', i, false)).join('')}
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px">
+          ${e.monsterZones.map((z, i) => renderZoneCard(z, 'enemy-monster', i, false)).join('')}
+        </div>
+      </div>
+      <div class="side-col">
+        ${renderZone('deck-zone','덱',e.deck.length)}
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderPlayerSide(p, d, isMyTurn) {
+  return `<div class="field-side">
+    <div style="display:grid;grid-template-columns:56px 1fr 56px;gap:4px;align-items:start">
+      <div class="side-col">
+        ${renderZone('deck-zone','덱',p.deck.length)}
+      </div>
+      <div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-bottom:4px">
+          ${p.monsterZones.map((z, i) => renderZoneCard(z, 'player-monster', i, isMyTurn)).join('')}
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px">
+          ${p.spellZones.map((z, i) => renderZoneCard(z, 'player-spell', i, isMyTurn)).join('')}
+        </div>
+      </div>
+      <div class="side-col">
+        ${renderZone('field-card','필드',null)}
+        ${renderZone('graveyard','묘지',p.graveyard.length, p.graveyard)}
+        ${renderZone('banish','제외',p.banished.length)}
+      </div>
+    </div>
+    <div class="hand-area">
+      ${p.hand.map((cardId, i) => {
+        const card = cardCache[cardId];
+        const img = card?.card_images?.[0]?.image_url_small || '';
+        const isSelected = selectedHandCard === i;
+        return `<div class="hand-card ${isSelected?'selected':''}"
+          onclick="selectHandCard(${i})"
+          onmouseenter="showTooltip(event, ${cardId})"
+          onmouseleave="hideTooltip()">
+          ${img ? `<img src="${img}" alt="">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:0.6rem;color:var(--text-muted);text-align:center;padding:3px">${card?.name||'?'}</div>`}
+        </div>`;
+      }).join('')}
+      ${p.hand.length === 0 ? '<div style="color:var(--text-muted);font-size:0.75rem">핸드 없음</div>' : ''}
+    </div>
+  </div>`;
+}
+
+function renderZone(type, label, count, cards) {
+  const hasCard = count > 0;
+  return `<div class="zone ${type}" style="position:relative;cursor:${hasCard?'pointer':'default'}"
+    ${cards && cards.length > 0 ? `onclick="showGraveyard(${JSON.stringify(cards).replace(/"/g,'&quot;')})"` : ''}>
+    <div class="zone-label">${label}</div>
+    ${count !== null ? `<div class="zone-count">${count}</div>` : ''}
+  </div>`;
+}
+
+function renderZoneCard(fieldCard, zoneType, zoneIdx, interactive) {
+  const isEnemyMonster = zoneType === 'enemy-monster';
+  const isPlayerMonster = zoneType === 'player-monster';
+  const isPlayerSpell = zoneType === 'player-spell';
+  const isEnemySpell = zoneType === 'enemy-spell';
+  const isAttacking = attackingMonster?.zoneIdx === zoneIdx && isPlayerMonster;
+
+  if (!fieldCard) {
+    let zoneClass = isPlayerMonster ? 'monster-zone' : isEnemyMonster ? 'monster-zone' :
+                    isPlayerSpell ? 'spell-zone' : 'spell-zone';
+    let label = isPlayerMonster ? 'M' : isEnemyMonster ? 'M' : isPlayerSpell ? 'S/T' : 'S/T';
+
+    let clickHandler = '';
+    if (interactive && selectedHandCard !== null) {
+      const d = duel();
+      if (d.activePlayer === 0 && (d.phase === 'MAIN1' || d.phase === 'MAIN2')) {
+        if (isPlayerMonster) clickHandler = `onEmptyMonsterZoneClick(${zoneIdx})`;
+        if (isPlayerSpell) clickHandler = `onEmptySpellZoneClick(${zoneIdx})`;
+      }
+    }
+    if (interactive && attackingMonster && isEnemyMonster) {
+      clickHandler = `declareAttack(${attackingMonster.zoneIdx}, ${zoneIdx})`;
+    }
+
+    return `<div class="zone ${zoneClass} ${attackingMonster && isEnemyMonster ? 'active-target' : ''}"
+      onclick="${clickHandler}" style="cursor:${clickHandler?'pointer':'default'}">
+      <div class="zone-label">${label}</div>
+    </div>`;
+  }
+
+  const card = cardCache[fieldCard.cardId];
+  const img = fieldCard.faceUp && card?.card_images?.[0]?.image_url_small || '';
+  const isDef = fieldCard.position === 'DEF';
+
+  let clickHandler = '';
+  if (interactive && isPlayerMonster) {
+    if (duel().phase === 'BATTLE' && duel().activePlayer === 0 && fieldCard.canAttack && !fieldCard.attacked) {
+      clickHandler = `selectAttacker(${zoneIdx})`;
+    } else if (duel().phase === 'MAIN1' || duel().phase === 'MAIN2') {
+      clickHandler = `showCardContextMenu(event, 'player-monster', ${zoneIdx})`;
+    }
+  }
+  if (attackingMonster && isEnemyMonster) {
+    clickHandler = `declareAttack(${attackingMonster.zoneIdx}, ${zoneIdx})`;
+  }
+
+  return `<div class="zone ${isEnemyMonster?'monster-zone':'monster-zone'} ${isAttacking?'active-target':''} ${attackingMonster && isEnemyMonster ? 'active-target' : ''}"
+    onclick="${clickHandler}"
+    onmouseenter="showTooltip(event, ${fieldCard.cardId})"
+    onmouseleave="hideTooltip()"
+    style="cursor:${clickHandler?'pointer':'default'};padding:0">
+    <div class="zone-card ${!fieldCard.faceUp?'face-down':''} ${isDef?'defense':''}">
+      ${fieldCard.faceUp && img ? `<img src="${img}" alt="">` : '🃏'}
+      ${fieldCard.faceUp && card && isMonster(card) ? `<div class="card-atk-badge">
+        <span class="atk-val">${card.atk??'?'}</span>
+        <span class="def-val">${card.def??'?'}</span>
+      </div>` : ''}
+    </div>
+  </div>`;
+}
+
+function renderActionPanel(d, isMyTurn) {
+  const log = G.log[0];
+  const canAdvance = isMyTurn && d.phase !== 'DRAW' && d.phase !== 'STANDBY';
+
+  return `<div class="action-panel">
+    <div class="action-log">
+      ${log ? `<div class="log-entry" style="color:${
+        log.type==='special'?'var(--gold)':log.type==='danger'?'#ff6060':log.type==='phase'?'var(--text-muted)':log.type==='enemy'?'#ff9090':'var(--text-primary)'
+      }">${log.msg}</div>` : '<span>듀얼 시작!</span>'}
+    </div>
+    ${attackingMonster ? `<button class="btn-danger" onclick="cancelAttack()">공격 취소</button>
+      <button class="btn-phase" onclick="directAttack()">직접 공격</button>` : ''}
+    ${isMyTurn && !attackingMonster ? `
+      ${d.phase === 'MAIN1' || d.phase === 'MAIN2' ? `<button class="btn-phase" onclick="activateSelectedCard()">카드 발동</button>` : ''}
+      ${d.phase === 'MAIN1' ? `<button class="btn-phase" onclick="goToBattlePhase()">배틀 페이즈</button>` : ''}
+      <button class="btn-gold" style="padding:0.4rem 1rem;font-family:Cinzel,serif;font-size:0.75rem;letter-spacing:0.1em" 
+        onclick="advancePhase()">다음 페이즈 →</button>
+    ` : ''}
+    ${!isMyTurn ? `<div style="color:var(--text-muted);font-size:0.8rem;font-family:Cinzel,serif;letter-spacing:0.1em">상대 턴...</div>` : ''}
+    <button class="btn-danger" style="font-size:0.7rem;padding:0.3rem 0.6rem" onclick="if(confirm('포기하시겠습니까?'))endDuel(1)">포기</button>
+  </div>`;
+}
+
+function renderTooltip() {
+  if (!G.tooltip) return '';
+  const { cardId, x, y } = G.tooltip;
+  const card = cardCache[cardId];
+  if (!card) return '';
+  const img = card.card_images?.[0]?.image_url_small || '';
+  const left = x > window.innerWidth - 260 ? x - 250 : x + 12;
+  const top = Math.min(y, window.innerHeight - 400);
+  return `<div class="card-tooltip" style="left:${left}px;top:${top}px">
+    ${img ? `<img class="tooltip-img" src="${img}" alt="">` : ''}
+    <div class="tooltip-body">
+      <div class="tooltip-name">${card.name}</div>
+      <div class="tooltip-type">${card.type} ${card.race ? `/ ${card.race}` : ''} ${card.level ? `/ ★${card.level}` : ''}</div>
+      ${isMonster(card) ? `<div class="tooltip-stats">
+        <span class="tooltip-atk">ATK ${card.atk ?? '?'}</span>
+        <span class="tooltip-def">DEF ${card.def ?? '?'}</span>
+      </div>` : ''}
+      <div class="tooltip-desc">${(card.desc || '').slice(0, 200)}${card.desc?.length > 200 ? '...' : ''}</div>
+    </div>
+  </div>`;
+}
+
+function renderContextMenu() {
+  if (!G.contextMenu) return '';
+  const { x, y, items } = G.contextMenu;
+  return `<div class="context-menu" style="left:${x}px;top:${y}px">
+    ${items.map(item => `<div class="context-item" onclick="${item.action}">${item.label}</div>`).join('')}
+    <div class="context-item" style="color:var(--text-muted)" onclick="closeContextMenu()">취소</div>
+  </div>`;
+}
+
+function renderModal() {
+  if (!G.modal) return '';
+  const m = G.modal;
+
+  if (m.type === 'pvp') {
+    return `<div class="modal-overlay" onclick="G.modal=null;render()">
+      <div class="modal-box" onclick="event.stopPropagation()">
+        <div class="modal-title">⚔ PvP 대전</div>
+        <div class="modal-content">Supabase Realtime을 연동하면 실시간 PvP가 가능합니다.<br>
+        현재는 AI 대전만 지원합니다.</div>
+        <div class="modal-actions">
+          <button class="btn-gold" onclick="G.modal=null;render()">확인</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  if (m.type === 'discard') {
+    const p = player();
+    return `<div class="modal-overlay">
+      <div class="modal-box">
+        <div class="modal-title">핸드 제한</div>
+        <div class="modal-content">${m.count}장을 묘지로 보내야 합니다. (${m.selected.length}/${m.count} 선택됨)</div>
+        <div class="card-select-grid">
+          ${p.hand.map((cardId, i) => {
+            const card = cardCache[cardId];
+            const img = card?.card_images?.[0]?.image_url_small || '';
+            const sel = m.selected.includes(i);
+            return `<div class="card-mini ${sel?'':''}; style="border:2px solid ${sel?'var(--gold)':'transparent'};border-radius:3px"
+              onclick="toggleDiscardSelect(${i})">
+              ${img ? `<img src="${img}" alt="">` : card?.name || '?'}
+            </div>`;
+          }).join('')}
+        </div>
+        <div class="modal-actions">
+          <button class="btn-gold" onclick="confirmDiscard()" ${m.selected.length < m.count ? 'disabled style="opacity:0.5"' : ''}>확인</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  if (m.type === 'graveyard') {
+    return `<div class="modal-overlay" onclick="G.modal=null;render()">
+      <div class="modal-box" onclick="event.stopPropagation()" style="max-width:600px">
+        <div class="modal-title">묘지</div>
+        <div class="card-select-grid">
+          ${m.cards.map(cardId => {
+            const card = cardCache[cardId];
+            const img = card?.card_images?.[0]?.image_url_small || '';
+            return `<div class="card-mini" onmouseenter="showTooltip(event,${cardId})" onmouseleave="hideTooltip()">
+              ${img ? `<img src="${img}" alt="">` : card?.name || '?'}
+            </div>`;
+          }).join('')}
+        </div>
+        <div class="modal-actions">
+          <button class="btn-outline" onclick="G.modal=null;render()">닫기</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  return '';
+}
+
+function renderResult() {
+  const r = G.result;
+  const app = document.getElementById('app');
+  const div = document.createElement('div');
+  div.className = 'duel-result';
+  div.innerHTML = `<div class="result-box">
+    <div class="result-title">${r.isPlayer ? 'YOU WIN!' : 'YOU LOSE'}</div>
+    <div class="result-subtitle">${r.isPlayer ? '듀얼에서 승리했습니다!' : '다음에 다시 도전하세요!'}</div>
+    <div style="display:flex;gap:1rem;justify-content:center">
+      <button class="btn-gold" onclick="G.result=null;G.duel=null;G.screen='title';G.log=[];render()">타이틀로</button>
+      <button class="btn-outline" onclick="G.result=null;G.duel=null;startDuel('ai')">재도전</button>
+    </div>
+  </div>`;
+  app.appendChild(div);
+}
+
+// ============================================================
+// EVENT HANDLERS
+// ============================================================
+function attachEvents() {
+  document.addEventListener('click', (e) => {
+    if (G.contextMenu && !e.target.closest('.context-menu')) {
+      closeContextMenu();
+    }
+  }, { once: true });
+}
+
+function onSearchInput(val) {
+  G.searchQuery = val;
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => doSearch(), 600);
+}
+
+function doSearch() {
+  searchCards(G.searchQuery, G.searchFilter);
+}
+
+function setFilter(f) {
+  G.searchFilter = f;
+  doSearch();
+}
+
+function addCardToDeck(cardId, remove=false) {
+  const card = cardCache[cardId];
+  if (!card) return;
+  const isExtra = isExtraType(card);
+  const list = isExtra ? G.playerExtra : G.playerDeck;
+  const maxMain = 60;
+  const totalMain = G.playerDeck.reduce((s, d) => s + d.qty, 0);
+  const totalExtra = G.playerExtra.reduce((s, d) => s + d.qty, 0);
+
+  const existing = list.find(d => d.id === cardId);
+
+  if (remove) {
+    if (!existing) return;
+    existing.qty--;
+    if (existing.qty <= 0) list.splice(list.indexOf(existing), 1);
+  } else {
+    if (!isExtra && totalMain >= maxMain) { addLog('덱이 가득 찼습니다! (최대 60장)'); return; }
+    if (isExtra && totalExtra >= 15) { addLog('엑스트라 덱이 가득 찼습니다! (최대 15장)'); return; }
+    if (existing) {
+      if (existing.qty >= 3) { addLog('동일 카드는 최대 3장까지입니다!'); return; }
+      existing.qty++;
+    } else {
+      list.push({ id: cardId, qty: 1 });
+      cardCache[cardId] = card;
+    }
+  }
+  render();
+}
+
+function goToDeckBuilder() {
+  G.screen = 'deckbuilder';
+  if (G.searchResults.length === 0) doSearch();
+  render();
+}
+
+function quickDuel(mode) {
+  G.screen = 'duel';
+  selectedHandCard = null;
+  attackingMonster = null;
+  startDuel(mode);
+}
+
+function showPvPModal() {
+  G.modal = { type: 'pvp' };
+  render();
+}
+
+function showTooltip(e, cardId) {
+  G.tooltip = { cardId, x: e.clientX, y: e.clientY };
+  const tip = document.querySelector('.card-tooltip');
+  if (tip) {
+    const left = e.clientX > window.innerWidth - 260 ? e.clientX - 250 : e.clientX + 12;
+    tip.style.left = left + 'px';
+    tip.style.top = Math.min(e.clientY, window.innerHeight - 400) + 'px';
+  } else {
+    render();
+  }
+}
+
+function hideTooltip() {
+  G.tooltip = null;
+  const tip = document.querySelector('.card-tooltip');
+  if (tip) tip.remove();
+}
+
+function selectHandCard(idx) {
+  if (selectedHandCard === idx) {
+    selectedHandCard = null;
+  } else {
+    selectedHandCard = idx;
+    attackingMonster = null;
+  }
+  render();
+}
+
+function onEmptyMonsterZoneClick(zoneIdx) {
+  if (selectedHandCard === null) return;
+  const d = duel();
+  if (d.activePlayer !== 0) return;
+  if (d.phase !== 'MAIN1' && d.phase !== 'MAIN2') return;
+  const cardId = player().hand[selectedHandCard];
+  const card = cardCache[cardId];
+  if (!card) return;
+
+  if (isMonster(card)) {
+    if (isExtraType(card)) {
+      addLog('특수 소환은 아직 준비 중입니다.');
+      return;
+    }
+    showCardContextMenu({ clientX: 200, clientY: 200 }, 'hand-monster', selectedHandCard, zoneIdx);
+  } else {
+    addLog('몬스터 존에는 몬스터 카드만!');
+  }
+}
+
+function onEmptySpellZoneClick(zoneIdx) {
+  if (selectedHandCard === null) return;
+  const d = duel();
+  if (d.activePlayer !== 0) return;
+  if (d.phase !== 'MAIN1' && d.phase !== 'MAIN2') return;
+  const cardId = player().hand[selectedHandCard];
+  const card = cardCache[cardId];
+  if (!card) return;
+
+  if (isMonster(card)) { addLog('마법/함정 존에는 마법/함정 카드만!'); return; }
+  setCard(cardId, 'spell', zoneIdx);
+  selectedHandCard = null;
+}
+
+function showCardContextMenu(e, zoneType, zoneIdx, targetZoneIdx) {
+  const x = e.clientX || 300;
+  const y = e.clientY || 300;
+  let items = [];
+
+  if (zoneType === 'hand-monster') {
+    items = [
+      { label: '일반 소환 (공격 표시)', action: `normalSummon(player().hand[${zoneIdx}], ${targetZoneIdx});selectedHandCard=null;closeContextMenu()` },
+      { label: '세트 (수비 표시)', action: `setCard(player().hand[${zoneIdx}], 'monster', ${targetZoneIdx});selectedHandCard=null;closeContextMenu()` },
+    ];
+  } else if (zoneType === 'player-monster') {
+    const fc = player().monsterZones[zoneIdx];
+    if (fc) {
+      items = [
+        { label: '표시 방향 변경', action: `changePosition(${zoneIdx});closeContextMenu()` },
+      ];
+      if (duel().phase === 'BATTLE' && fc.canAttack && !fc.attacked) {
+        items.unshift({ label: '공격 선언', action: `selectAttacker(${zoneIdx});closeContextMenu()` });
+      }
+    }
+  }
+
+  G.contextMenu = { x, y, items };
+  render();
+}
+
+function closeContextMenu() {
+  G.contextMenu = null;
+  const el = document.querySelector('.context-menu');
+  if (el) el.remove();
+}
+
+function changePosition(zoneIdx) {
+  const fc = player().monsterZones[zoneIdx];
+  if (!fc) return;
+  fc.position = fc.position === 'ATK' ? 'DEF' : 'ATK';
+  addLog(`몬스터 표시 방향 변경: ${fc.position}`);
+  render();
+}
+
+function selectAttacker(zoneIdx) {
+  attackingMonster = { zoneIdx };
+  addLog('공격할 대상을 선택하세요. (상대 존 또는 직접 공격)');
+  render();
+}
+
+function cancelAttack() {
+  attackingMonster = null;
+  render();
+}
+
+function directAttack() {
+  if (!attackingMonster) return;
+  declareAttack(attackingMonster.zoneIdx, -1);
+  attackingMonster = null;
+}
+
+function activateSelectedCard() {
+  if (selectedHandCard === null) return;
+  const cardId = player().hand[selectedHandCard];
+  const card = cardCache[cardId];
+  if (!card) return;
+  if (isMonster(card)) { addLog('몬스터는 소환하려면 존을 클릭하세요!'); return; }
+  // Find first empty spell zone
+  const zoneIdx = player().spellZones.findIndex(z => z === null);
+  if (zoneIdx === -1) { addLog('마법/함정 존이 가득 찼습니다!'); return; }
+  setCard(cardId, 'spell', zoneIdx);
+  selectedHandCard = null;
+}
+
+function goToBattlePhase() {
+  duel().phase = 'MAIN1';
+  // Enable all player monsters to attack
+  player().monsterZones.forEach(z => {
+    if (z) z.canAttack = true;
+  });
+  advancePhase();
+}
+
+function showGraveyard(cards) {
+  G.modal = { type: 'graveyard', cards };
+  render();
+}
+
+function toggleDiscardSelect(idx) {
+  const m = G.modal;
+  if (!m || m.type !== 'discard') return;
+  const i = m.selected.indexOf(idx);
+  if (i > -1) m.selected.splice(i, 1);
+  else if (m.selected.length < m.count) m.selected.push(idx);
+  render();
+}
+
+function confirmDiscard() {
+  const m = G.modal;
+  if (!m || m.type !== 'discard') return;
+  const p = player();
+  m.selected.sort((a, b) => b - a).forEach(idx => {
+    const cardId = p.hand.splice(idx, 1)[0];
+    p.graveyard.push(cardId);
+  });
+  G.modal = null;
+  advancePhase();
+}
+
+// ============================================================
+// INIT
+// ============================================================
+async function init() {
+  G.loading = true;
+  G.loadingMsg = '카드 데이터 로딩 중...';
+
+  // Pre-fetch AI deck cards and sample deck cards
+  const preloadIds = [...new Set([...AI_DECK_IDS, ...SAMPLE_DECK_IDS])];
+  await fetchCardsByIds(preloadIds);
+
+  G.loading = false;
+  render();
+
+  // Load initial search
+  searchCards('', 'all');
+}
+
+init();
+</script>
+</body>
+</html>
