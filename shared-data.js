@@ -74,12 +74,36 @@ const DB = {
 // ─── EFFECT SCHEMA ───────────────────────────────────────────
 // Effect = {
 //   id: string,
-//   trigger: TriggerType,  // when this effect fires
-//   condition: string,     // optional JS expression string for condition check
-//   actions: Action[],     // what the effect does
-//   cost: Action[],        // what must be paid to activate
-//   once: boolean,         // once per turn?
-//   description: string,   // human readable
+//   trigger: TriggerType,
+//   condition: string,          // JS 표현식 (하위 호환, 새 카드는 builtinConditions 권장)
+//   builtinConditions: Array,   // 내장 조건 배열 (JS 불필요)
+//     예: [{type:'opp_field_count_ge', value:4, failReason:'상대 필드에 카드 4장 이상 필요'},
+//          {type:'my_lp_le', value:2000, failReason:'LP 2000 이하 필요'},
+//          {type:'took_battle_damage', failReason:'전투 데미지를 받은 직후에만 발동 가능'},
+//          {type:'opp_monster_count_ge', value:2},
+//          {type:'my_gy_count_ge', value:3},
+//          {type:'my_hand_count_le', value:2}]
+//   activationLocation: 'field'|'hand'|'gy',  // 발동 위치 (기본: 'field')
+//   activationScope: 'own_turn'|'either_turn'|'opponent_turn', // 발동 타이밍 (기본: 'own_turn')
+//   chainable: boolean,         // true = 상대 턴/체인2이상 발동 가능 (속공류), false = 메인페이즈만
+//   actions: Action[],
+//   cost: Action[],
+//   once: boolean,
+//   description: string,
+// }
+//
+// special_summon Action의 확장 스키마:
+// {
+//   type: 'special_summon',
+//   ss_source: 'gy'|'hand'|'deck'|'banished'|'token'|'self',
+//   ss_target_player: 'self'|'opponent',   // 누구의 gy/hand에서
+//   ss_filter: 'any'|'monster'|[cardId...], // 소환 가능 카드 필터
+//   ss_count: number,
+//   ss_position: 'ATK'|'DEF'|'facedown',
+//   ss_negate_effect: boolean,             // 소환된 몬스터 효과 무효화
+//   ss_cannot_attack: boolean,
+//   ss_condition: string,                  // 추가 JS 조건 (builtinConditions와 병용 가능)
+//   target: 'from_gy',                     // 하위 호환
 // }
 //
 // TriggerType:
@@ -696,13 +720,104 @@ const DEFAULT_CARDS = [
         id: 'e_s007_1',
         trigger: 'on_activate',
         condition: null,
-        actions: [{ type: 'special_summon', target: 'from_gy' }],
+        actions: [{
+          type: 'special_summon',
+          ss_source: 'gy',
+          ss_target_player: 'self',
+          ss_filter: 'monster',
+          ss_count: 1,
+          ss_position: 'ATK',
+        }],
         cost: [],
         once: true,
         description: '묘지에서 몬스터 1체 특수 소환',
       }
     ],
     image: '✨', rarity: 'ultra',
+  },
+  // ── 새 스키마 예시 카드들 ─────────────────────────────────
+  {
+    id: 'm013', name: '역습의 전사', type: 'monster', subtype: 'effect',
+    attribute: 'EARTH', race: '전사족', level: 4,
+    atk: 1700, def: 1000,
+    desc: '상대 필드에 카드가 4장 이상 존재할 경우에 발동할 수 있다. 자신의 패에서 이 카드를 특수 소환한다.',
+    effects: [
+      {
+        id: 'e_m013_1',
+        trigger: 'manual',
+        activationLocation: 'hand',
+        activationScope: 'own_turn',
+        chainable: false,
+        builtinConditions: [
+          {type:'opp_field_count_ge', value:4, failReason:'상대 필드에 카드 4장 이상 필요'},
+        ],
+        actions: [{
+          type: 'special_summon',
+          ss_source: 'self',
+          ss_target_player: 'self',
+          ss_count: 1,
+          ss_position: 'ATK',
+        }],
+        cost: [],
+        once: true,
+        description: '상대 필드 4장 이상 시 패에서 특수 소환',
+      }
+    ],
+    image: '🗡', rarity: 'rare',
+  },
+  {
+    id: 'm014', name: '상처받은 용사', type: 'monster', subtype: 'effect',
+    attribute: 'LIGHT', race: '전사족', level: 3,
+    atk: 1000, def: 800,
+    desc: '상대 몬스터의 공격으로 전투 데미지를 받았을 때 발동할 수 있다. 덱에서 카드를 1장 드로우한다.',
+    effects: [
+      {
+        id: 'e_m014_1',
+        trigger: 'manual',
+        activationLocation: 'field',
+        activationScope: 'either_turn',
+        chainable: true,
+        builtinConditions: [
+          {type:'took_battle_damage', failReason:'전투 데미지를 받은 직후에만 발동 가능'},
+        ],
+        actions: [{ type: 'draw', value: 1 }],
+        cost: [],
+        once: true,
+        description: '전투 데미지를 받은 직후 드로우 1장',
+      }
+    ],
+    image: '🩹', rarity: 'rare',
+  },
+  {
+    id: 'm015', name: '생환의 망령', type: 'monster', subtype: 'effect',
+    attribute: 'DARK', race: '언데드족', level: 4,
+    atk: 1400, def: 1200,
+    desc: '자신의 LP가 2000 이하일 경우에 발동할 수 있다. 자신의 묘지에서 몬스터 1체를 특수 소환한다.',
+    effects: [
+      {
+        id: 'e_m015_1',
+        trigger: 'manual',
+        activationLocation: 'field',
+        activationScope: 'own_turn',
+        chainable: false,
+        builtinConditions: [
+          {type:'my_lp_le', value:2000, failReason:'LP 2000 이하일 때만 발동 가능'},
+          {type:'my_gy_count_ge', value:1, failReason:'묘지에 몬스터 필요'},
+        ],
+        actions: [{
+          type: 'special_summon',
+          ss_source: 'gy',
+          ss_target_player: 'self',
+          ss_filter: 'monster',
+          ss_count: 1,
+          ss_position: 'ATK',
+        }],
+        cost: [],
+        once: true,
+        description: 'LP 2000 이하 시 묘지에서 몬스터 특수 소환',
+      }
+    ],
+    image: '💀', rarity: 'super',
   },
   {
     id: 's008', name: '덱 통찰', type: 'spell', subtype: 'normal',
