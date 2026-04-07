@@ -15,6 +15,10 @@
   --text:#e8e0cc;--muted:#7a7060;
   --cinzel:'Cinzel',serif;--sans:'Noto Sans KR',sans-serif;
   --lp-p:#3366ff;--lp-e:#ff3366;
+  /* UI 스케일 - 슬라이더로 제어 */
+  --ui-scale:0.82;
+  --card-min:58px;
+  --hand-card-w:44px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
@@ -57,9 +61,9 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .pool-search:focus{border-color:var(--gold)}.pool-search::placeholder{color:var(--muted)}
 .filter-pill{background:var(--bg2);border:1px solid var(--border);color:var(--muted);padding:.28rem .7rem;font-size:.72rem;font-family:var(--cinzel);cursor:pointer;border-radius:2px;transition:all .15s;white-space:nowrap}
 .filter-pill.on,.filter-pill:hover{border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,.06)}
-.card-pool-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:5px;overflow-y:auto;flex:1;align-content:start;padding-right:2px}
+.card-pool-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--card-min),1fr));gap:4px;overflow-y:auto;flex:1;align-content:start;padding-right:2px}
 .pool-card{position:relative;cursor:pointer;border:1.5px solid var(--border);border-radius:3px;overflow:hidden;transition:all .15s;aspect-ratio:3/4.2;background:var(--bg2);display:flex;flex-direction:column;user-select:none}
-.pool-card:hover{border-color:var(--gold);transform:translateY(-3px) scale(1.04);z-index:5;box-shadow:0 4px 16px rgba(201,168,76,.3)}
+.pool-card:hover{border-color:var(--gold);transform:translateY(-2px) scale(1.03);z-index:5;box-shadow:0 3px 12px rgba(201,168,76,.3)}
 .pool-card-img{flex:1;display:flex;align-items:center;justify-content:center;font-size:2rem;position:relative}
 .pool-card-frame{position:absolute;inset:0;opacity:.15}
 .pool-card-footer{padding:2px 4px;font-size:.56rem;font-family:var(--cinzel);color:rgba(0,0,0,.85);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -109,13 +113,13 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 /* Field */
 .field{display:grid;grid-template-rows:1fr 6px 1fr;gap:.3rem}
 .field-side{display:grid;grid-template-rows:auto auto;gap:.3rem}
-.field-main-area{display:grid;grid-template-columns:52px 1fr 52px;gap:.3rem}
-.zone-col{display:flex;flex-direction:column;gap:.3rem;justify-content:center}
-.monster-row,.spell-row{display:grid;grid-template-columns:repeat(5,1fr);gap:.3rem}
+.field-main-area{display:grid;grid-template-columns:44px 1fr 44px;gap:.25rem}
+.zone-col{display:flex;flex-direction:column;gap:.25rem;justify-content:center}
+.monster-row,.spell-row{display:grid;grid-template-columns:repeat(5,1fr);gap:.25rem}
 .field-divider{background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.25;border-radius:2px}
 
 /* Zones */
-.zone{aspect-ratio:59/86;border:1px solid var(--border2);border-radius:2px;background:rgba(255,255,255,.015);display:flex;align-items:center;justify-content:center;cursor:default;transition:all .2s;position:relative;overflow:hidden;font-size:.52rem;color:var(--muted);letter-spacing:.03em;font-family:var(--cinzel)}
+.zone{aspect-ratio:59/86;border:1px solid var(--border2);border-radius:2px;background:rgba(255,255,255,.015);display:flex;align-items:center;justify-content:center;cursor:default;transition:all .2s;position:relative;overflow:hidden;font-size:.48rem;color:var(--muted);letter-spacing:.02em;font-family:var(--cinzel)}
 .zone.clickable{cursor:pointer}.zone.clickable:hover{border-color:rgba(201,168,76,.4);background:rgba(201,168,76,.04)}
 .zone.mzone{border-color:rgba(240,192,64,.18)}
 .zone.szone{border-color:rgba(10,160,128,.18)}
@@ -141,10 +145,10 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .set-mark{position:absolute;top:2px;left:2px;background:rgba(100,100,255,.8);color:#fff;font-size:.5rem;padding:1px 3px;border-radius:1px;font-family:var(--cinzel);pointer-events:none}
 
 /* Hand */
-.hand-area{display:flex;align-items:flex-end;justify-content:center;gap:4px;padding:.4rem .5rem;background:rgba(255,255,255,.01);border:1px solid var(--border);border-radius:3px;min-height:82px;flex-wrap:wrap}
-.hand-card{width:52px;aspect-ratio:59/86;border:1.5px solid var(--border);border-radius:3px;overflow:hidden;cursor:pointer;transition:all .2s;position:relative;flex-shrink:0;background:var(--bg2);display:flex;align-items:center;justify-content:center}
-.hand-card:hover{transform:translateY(-12px) scale(1.08);border-color:var(--gold);z-index:5;box-shadow:0 6px 20px rgba(201,168,76,.35)}
-.hand-card.selected{transform:translateY(-18px) scale(1.1);border-color:var(--gold);box-shadow:0 0 20px rgba(201,168,76,.7)}
+.hand-area{display:flex;align-items:flex-end;justify-content:center;gap:3px;padding:.3rem .4rem;background:rgba(255,255,255,.01);border:1px solid var(--border);border-radius:3px;min-height:70px;flex-wrap:wrap}
+.hand-card{width:var(--hand-card-w);aspect-ratio:59/86;border:1.5px solid var(--border);border-radius:3px;overflow:hidden;cursor:pointer;transition:all .2s;position:relative;flex-shrink:0;background:var(--bg2);display:flex;align-items:center;justify-content:center}
+.hand-card:hover{transform:translateY(-10px) scale(1.08);border-color:var(--gold);z-index:5;box-shadow:0 5px 16px rgba(201,168,76,.35)}
+.hand-card.selected{transform:translateY(-14px) scale(1.1);border-color:var(--gold);box-shadow:0 0 16px rgba(201,168,76,.7)}
 .hand-card.face-down{font-size:1.1rem}
 .hand-card-inner{width:100%;height:100%;position:relative;display:flex;align-items:center;justify-content:center}
 .hand-card-emoji{font-size:1.5rem;position:relative;z-index:1}
@@ -254,6 +258,9 @@ const App={
 function init(){
   const cards=DB.getCards();
   CARDDB=buildCardIndex(cards);
+  // 저장된 UI 스케일 복원
+  const savedScale=parseFloat(localStorage.getItem('ui_scale')||'0.82');
+  applyUIScale(savedScale);
   render();
 }
 
@@ -340,12 +347,9 @@ function maxCopies(cardId){
 
 // ── Activatable checks ──
 function canActivateEffect(eff,fc,pi,context){
-  // context: {phase, isMyTurn, inBattle, onChain}
-  const card=CARDDB[fc?.cardId];
-  if(!card||!card.effects)return false;
-  if(eff.once&&fc._usedEffects?.includes(eff.id))return false;
-  // Check condition
-  if(eff.condition){
+  // fc가 null인 경우(핸드에서 수동 발동 등) once 체크 생략
+  if(eff.once&&fc&&fc._usedEffects?.includes(eff.id))return false;
+  if(eff.condition&&fc){
     try{
       const fn=new Function('ctx','state',`return(${eff.condition})`);
       if(!fn({state:d(),cardDB:CARDDB,controller:pi,sourceCard:fc},d()))return false;
@@ -857,35 +861,52 @@ function toggleTargetSelect(idx){
 // ══════════════════════════════════════════
 // TRIGGER SYSTEM & CHAIN
 // ══════════════════════════════════════════
+// 소환/파괴 트리거는 해당 카드 자신에게만 발동
+const SELF_ONLY_TRIGGERS=new Set(['on_summon','on_normal_summon','on_special_summon','on_destroy','on_send_to_gy','on_attack','on_attacked']);
+
 function fireTriggers(trigger,sourceFC,sourcePi){
-  // Collect all cards that have this trigger and check if player can chain
   const pendingChains=[];
-  for(let pi=0;pi<2;pi++){
-    const p=P(pi);
-    [...p.monsterZones,...p.spellZones].forEach(fc=>{
-      if(!fc||!fc.faceUp)return;
-      const card=CARDDB[fc.cardId];if(!card||!card.effects)return;
-      card.effects.filter(e=>e.trigger===trigger).forEach(eff=>{
-        if(canActivateEffect(eff,fc,pi,{})){
-          pendingChains.push({fc,eff,pi});
-        }
+  const isSelfOnly=SELF_ONLY_TRIGGERS.has(trigger);
+
+  if(isSelfOnly){
+    // 해당 카드 자신의 효과만 체크
+    if(sourceFC){
+      const card=CARDDB[sourceFC.cardId];
+      if(card&&card.effects){
+        card.effects.filter(e=>e.trigger===trigger).forEach(eff=>{
+          if(canActivateEffect(eff,sourceFC,sourcePi,{})){
+            pendingChains.push({fc:sourceFC,eff,pi:sourcePi});
+          }
+        });
+      }
+    }
+  }else{
+    // on_activate 등 전체 필드 순회
+    for(let pi=0;pi<2;pi++){
+      const p=P(pi);
+      [...p.monsterZones,...p.spellZones].forEach(fc=>{
+        if(!fc||!fc.faceUp)return;
+        const card=CARDDB[fc.cardId];if(!card||!card.effects)return;
+        card.effects.filter(e=>e.trigger===trigger).forEach(eff=>{
+          if(canActivateEffect(eff,fc,pi,{})){
+            pendingChains.push({fc,eff,pi});
+          }
+        });
       });
-    });
-    // Check hand cards with on_summon etc (unlikely but possible)
+    }
   }
+
   // Player chain opportunities
   const playerChains=pendingChains.filter(c=>c.pi===0);
   if(playerChains.length>0&&!activeP().isAI){
-    // Show chain prompt
     askChain(playerChains,()=>{
-      // AI chains after
       pendingChains.filter(c=>c.pi===1).forEach(c=>{
         executeOneEffect(c.eff,c.fc,c.pi,()=>{});
       });
       checkLPWin();render();
     });
   }else{
-    pendingChains.filter(c=>c.pi===1).forEach(c=>{
+    pendingChains.forEach(c=>{
       executeOneEffect(c.eff,c.fc,c.pi,()=>{});
     });
     checkLPWin();
@@ -1145,6 +1166,7 @@ function render(){
 
 // ── TITLE ──
 function renderTitle(){
+  const scale=parseFloat(localStorage.getItem('ui_scale')||'0.82');
   return`<div class="title-bg"></div>
   <div class="title-screen">
     <div class="title-emblem">⚔</div>
@@ -1154,16 +1176,42 @@ function renderTitle(){
       <button class="btn btn-gold" onclick="quickStart()">▶ 빠른 시작 (vs AI)</button>
       <button class="btn btn-outline" style="font-size:.75rem" onclick="openAdmin()">⚙ 관리자 패널</button>
     </div>
+    <div style="width:100%;max-width:300px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:.8rem 1rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
+        <span style="font-family:var(--cinzel);font-size:.72rem;color:var(--muted);letter-spacing:.08em">UI 스케일</span>
+        <span id="scale-val" style="font-family:var(--cinzel);font-size:.78rem;color:var(--gold)">${Math.round(scale*100)}%</span>
+      </div>
+      <input type="range" min="60" max="120" value="${Math.round(scale*100)}" step="5"
+        style="width:100%;accent-color:var(--gold);cursor:pointer"
+        oninput="applyUIScale(this.value/100);document.getElementById('scale-val').textContent=this.value+'%'">
+      <div style="display:flex;justify-content:space-between;font-size:.62rem;color:var(--muted);margin-top:.3rem;font-family:var(--cinzel)"><span>60%</span><span>100%</span><span>120%</span></div>
+    </div>
     <div style="font-size:.7rem;color:var(--muted);font-family:var(--cinzel);letter-spacing:.2em">카드 ${Object.keys(CARDDB).length}장 등록됨</div>
   </div>`;
+}
+
+function applyUIScale(scale){
+  localStorage.setItem('ui_scale',scale);
+  const cardMin=Math.round(58*scale)+'px';
+  const handW=Math.round(44*scale)+'px';
+  document.documentElement.style.setProperty('--ui-scale',scale);
+  document.documentElement.style.setProperty('--card-min',cardMin);
+  document.documentElement.style.setProperty('--hand-card-w',handW);
+  // 폰트 스케일
+  document.documentElement.style.fontSize=(scale*100)+'%';
 }
 
 // ── DECK BUILDER ──
 function renderDeckBuilder(){
   const S=App.db;
+  const isExtraTab=S.activeTab==='extra';
   const cards=Object.values(CARDDB).filter(c=>{
     const q=S.search.toLowerCase();
-    return(S.typeFilter==='all'||c.type===S.typeFilter)&&(!q||c.name.toLowerCase().includes(q)||(c.desc||'').toLowerCase().includes(q));
+    const nameOk=!q||c.name.toLowerCase().includes(q)||(c.desc||'').toLowerCase().includes(q);
+    // 엑스트라 탭이면 엑스트라 타입만, 메인 탭이면 엑스트라 타입 제외
+    if(isExtraTab) return isExtraType(c)&&nameOk;
+    const typeOk=S.typeFilter==='all'||c.type===S.typeFilter;
+    return !isExtraType(c)&&typeOk&&nameOk;
   }).sort((a,b)=>a.type.localeCompare(b.type)||(b.atk||0)-(a.atk||0));
   const deck=S.currentDeck;
   const main=deck.main,extra=deck.extra;
@@ -1186,12 +1234,15 @@ function renderDeckBuilder(){
     <div class="card-pool">
       <div class="pool-toolbar">
         <input class="pool-search" placeholder="카드 이름/효과 검색..." value="${S.search}" oninput="App.db.search=this.value;render()">
-        ${['all','monster','spell','trap'].map(t=>`<button class="filter-pill ${S.typeFilter===t?'on':''}" onclick="App.db.typeFilter='${t}';render()">${{all:'전체',monster:'몬스터',spell:'마법',trap:'함정'}[t]}</button>`).join('')}
+        ${isExtraTab
+          ? `<span style="font-size:.72rem;color:var(--gold);font-family:var(--cinzel);padding:.28rem .7rem;border:1px solid var(--gold);border-radius:2px">엑스트라 덱 카드</span>`
+          : ['all','monster','spell','trap'].map(t=>`<button class="filter-pill ${S.typeFilter===t?'on':''}" onclick="App.db.typeFilter='${t}';render()">${{all:'전체',monster:'몬스터',spell:'마법',trap:'함정'}[t]}</button>`).join('')
+        }
         <span style="font-size:.72rem;color:var(--muted);margin-left:.3rem">${cards.length}건</span>
       </div>
       <div class="card-pool-grid">
         ${cards.map(card=>renderPoolCard(card,deck,restrictions)).join('')}
-        ${cards.length===0?'<div style="color:var(--muted);font-size:.8rem;grid-column:1/-1;text-align:center;padding:2rem">카드 없음</div>':''}
+        ${cards.length===0?`<div style="color:var(--muted);font-size:.8rem;grid-column:1/-1;text-align:center;padding:2rem">${isExtraTab?'엑스트라 덱 카드 없음':'카드 없음'}</div>`:''}
       </div>
     </div>
     <div class="deck-panel">
@@ -1500,41 +1551,47 @@ function renderActionBar(dv,isMyTurn){
 }
 
 // ══════════════════════════════════════════
-// TOOLTIP
+// TOOLTIP — render()와 완전 분리된 독립 DOM
 // ══════════════════════════════════════════
+function _getTooltipEl(){
+  let el=document.getElementById('_tt');
+  if(!el){
+    el=document.createElement('div');
+    el.id='_tt';
+    el.className='tooltip';
+    el.style.display='none';
+    document.body.appendChild(el);
+  }
+  return el;
+}
 function showTooltip(event,cardId){
-  App.tooltip={cardId,x:event.clientX,y:event.clientY};
-  const tip=document.getElementById('tooltip-el');
-  if(tip)positionTooltip(tip,event.clientX,event.clientY);
-}
-function hideTooltip(){
-  App.tooltip=null;
-  const tip=document.getElementById('tooltip-el');
-  if(tip)tip.style.display='none';
-}
-function positionTooltip(el,x,y){
-  el.style.display='block';
-  el.style.left=(x>window.innerWidth-250?x-240:x+12)+'px';
-  el.style.top=Math.min(y+10,window.innerHeight-360)+'px';
-}
-function renderTooltipHTML(){
-  if(!App.tooltip)return'<div id="tooltip-el" class="tooltip" style="display:none"></div>';
-  const {cardId,x,y}=App.tooltip;const card=CARDDB[cardId];
-  if(!card)return'<div id="tooltip-el" class="tooltip" style="display:none"></div>';
+  const card=CARDDB[cardId];
+  if(!card)return;
+  App.tooltip={cardId};
   const fc=getFrameColor(card);
-  const left=x>window.innerWidth-250?x-240:x+12;
-  const top=Math.min(y+10,window.innerHeight-360);
-  return`<div id="tooltip-el" class="tooltip" style="left:${left}px;top:${top}px">
-    <div class="tooltip-top" style="background:${fc}"></div>
+  const el=_getTooltipEl();
+  el.innerHTML=`<div class="tooltip-top" style="background:${fc}"></div>
     <div class="tooltip-body">
       <div class="tooltip-name">${card.name}</div>
-      <div class="tooltip-type">${{monster:'몬스터',spell:'마법',trap:'함정'}[card.type]} · ${card.subtype||''} ${card.type==='monster'?`· ★${card.level||0} · ${card.attribute||''} / ${card.race||''}`:''}</div>
+      <div class="tooltip-type">${{monster:'몬스터',spell:'마법',trap:'함정'}[card.type]||card.type} · ${card.subtype||''} ${card.type==='monster'?`· ★${card.level||0} · ${card.attribute||''} / ${card.race||''}`:''}</div>
       ${card.type==='monster'?`<div class="tooltip-stats"><span class="tooltip-atk">ATK ${card.atk??'?'}</span><span class="tooltip-def">DEF ${card.def??'?'}</span></div>`:''}
       <div class="tooltip-desc">${card.desc||''}</div>
       ${(card.effects||[]).length>0?`<div class="tooltip-effects">${card.effects.map(e=>`<div class="effect-chip">◈ ${e.description||e.trigger}</div>`).join('')}</div>`:''}
-    </div>
-  </div>`;
+    </div>`;
+  el.style.display='block';
+  positionTooltip(el,event.clientX,event.clientY);
 }
+function hideTooltip(){
+  App.tooltip=null;
+  const el=document.getElementById('_tt');
+  if(el)el.style.display='none';
+}
+function positionTooltip(el,x,y){
+  el.style.left=(x>window.innerWidth-250?x-240:x+12)+'px';
+  el.style.top=Math.min(y+10,window.innerHeight-360)+'px';
+}
+// render()에서 호출되는 인라인 툴팁 — 빈 문자열 반환 (독립DOM이 담당)
+function renderTooltipHTML(){return '';}
 
 // ══════════════════════════════════════════
 // CONTEXT MENU
@@ -1918,11 +1975,10 @@ function renderToast(msg,type='success'){
 function attachGlobalHandlers(){
   document.addEventListener('click',(e)=>{
     if(App.ctxMenu&&!e.target.closest('.ctxmenu'))closeCtx();
-    if(App.tooltip&&!e.target.closest('[onmouseenter]')){}
   },{once:true});
   document.addEventListener('mousemove',(e)=>{
-    const tip=document.getElementById('tooltip-el');
-    if(tip&&App.tooltip)positionTooltip(tip,e.clientX,e.clientY);
+    const el=document.getElementById('_tt');
+    if(el&&App.tooltip)positionTooltip(el,e.clientX,e.clientY);
   });
 }
 
