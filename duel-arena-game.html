@@ -1207,13 +1207,21 @@ function executeSpecialSummonAction(action,ctx,pi,callback){
     }catch{addLog('특수 소환 조건 오류.','danger');return callback&&callback();}
   }
 
-  // 소환 대상 풀 구성
+  // 소환 대상 풀 구성 (Bug2 fix: ss_source=self 처리 추가)
   let pool=[];
-  if(source==='gy')      pool=targetPlayer.graveyard.map((id,i)=>({id,i,from:'gy'})).filter(({id})=>CARDDB[id]&&isMonster(CARDDB[id])&&!CARDDB[id].noSpecialSummon);
+  if(source==='self'){
+    const selfCardId=ctx.sourceCard?.cardId;
+    if(!selfCardId){addLog('자기 자신 소환 실패: 카드 정보 없음.','danger');return callback&&callback();}
+    const handIdx=p.hand.indexOf(selfCardId);
+    if(handIdx===-1){addLog('패에 해당 카드가 없습니다.','danger');return callback&&callback();}
+    p.hand.splice(handIdx,1);
+    doSpecialSummonCard(selfCardId,pi,position,negateEff,action);
+    return callback&&callback();
+  }
+  else if(source==='gy') pool=targetPlayer.graveyard.map((id,i)=>({id,i,from:'gy'})).filter(({id})=>CARDDB[id]&&isMonster(CARDDB[id])&&!CARDDB[id].noSpecialSummon);
   else if(source==='hand') pool=targetPlayer.hand.map((id,i)=>({id,i,from:'hand'})).filter(({id})=>CARDDB[id]&&isMonster(CARDDB[id])&&!CARDDB[id].noSpecialSummon);
   else if(source==='banished') pool=targetPlayer.banished.map((id,i)=>({id,i,from:'banished'})).filter(({id})=>CARDDB[id]&&isMonster(CARDDB[id]));
   else if(source==='token'){
-    // 토큰 생성 (즉시 실행)
     doSpecialSummonCard('token_'+(Date.now()),pi,position,negateEff,null);
     return callback&&callback();
   }
@@ -1616,7 +1624,7 @@ function renderDeckBuilder(){
           const card=CARDDB[entry.id];if(!card)return'';
           const fc=getFrameColor(card);
           return`<div class="deck-row" onmouseenter="showTooltip(event,'${card.id}')" onmouseleave="hideTooltip()">
-            <div class="deck-row-icon">${card.image||'?'}</div>
+            <div class="deck-row-icon">${renderCardImage(card.image||'',20)}</div>
             <div class="deck-row-name" style="color:${fc}">${card.name}</div>
             <div class="deck-row-lvl">${card.type==='monster'?'★'+(card.level||0):''}</div>
             <div class="deck-row-atk">${card.type==='monster'?card.atk??'?':''}</div>
@@ -1652,7 +1660,7 @@ function renderPoolCard(card,deck,restrictions){
     <div class="pool-card-frame" style="background:${fc}"></div>
     <div class="pool-card-img">
       <div class="pool-card-frame" style="background:${fc};opacity:.2"></div>
-      <span style="position:relative;z-index:1;font-size:${(card.image||'').length>2?'1.4rem':'2rem'}">${card.image||'?'}</span>
+      <span style="position:relative;z-index:1">${renderCardImage(card.image||'',38)}</span>
     </div>
     <div class="pool-card-footer" style="background:${fc}cc;color:rgba(0,0,0,.85)">${card.name}</div>
     ${card.type==='monster'?`<div class="pool-card-atk">${card.atk??'?'}</div>`:''}
@@ -1763,7 +1771,7 @@ function renderSide(pi,dv,isMyTurn,isEnemy){
 function renderGYZone(pi,p){
   const topId=p.graveyard[p.graveyard.length-1];
   return`<div class="zone gz" onclick="showGY(${pi})" ${topId?`onmouseenter="showTooltip(event,'${topId}')" onmouseleave="hideTooltip()"`:''}>
-    ${topId?`<span style="font-size:1.1rem">${CARDDB[topId]?.image||'🃏'}</span>`:'<div>묘지</div>'}
+    ${topId?`<span>${renderCardImage(CARDDB[topId]?.image||'🃏',30)}</span>`:'<div>묘지</div>'}
     <div class="zone-cnt">${p.graveyard.length}</div>
   </div>`;
 }
@@ -1830,7 +1838,7 @@ function renderZone(fieldCard,zoneClass,pi,zoneType,zoneIdx,isMyTurn,isEnemy){
     style="padding:0">
     <div class="fcard ${isDef?'def-pos':''} ${!fieldCard.faceUp?'facedown':''} ${isSelectedAtk?'fcard-sel':''}">
       <div class="fcard-frame-overlay" style="background:${fc}"></div>
-      ${fieldCard.faceUp?`<span class="fcard-emoji">${card?.image||'?'}</span>`:'🃏'}
+      ${fieldCard.faceUp?`<span class="fcard-emoji">${renderCardImage(card?.image||'',32)}</span>`:'<span style="font-size:1.1rem">🃏</span>'}
       ${fieldCard.faceUp&&fieldCard.attacked?`<div class="atk-mark">⚔</div>`:''}
       ${!fieldCard.faceUp&&fieldCard.setThisTurn?`<div class="set-mark">SET</div>`:''}
       ${fieldCard.faceUp&&card?.type==='monster'&&atkVal!=null?`<div class="fcard-atk"><span class="atk-v">${atkVal}</span><span class="def-v">${defVal??'?'}</span></div>`:''}
@@ -1844,7 +1852,7 @@ function renderHandArea(p,isEnemy){
     ${p.hand.map((cardId,i)=>{
       const card=CARDDB[cardId];const fc=getFrameColor(card);const sel=App.ui.selectedHand===i;
       return`<div class="hand-card ${sel?'selected':''}" onclick="selectHand(${i})" onmouseenter="showTooltip(event,'${cardId}')" onmouseleave="hideTooltip()">
-        <div class="hand-card-inner"><div class="hand-card-overlay" style="background:${fc}"></div><span class="hand-card-emoji">${card?.image||'?'}</span></div>
+        <div class="hand-card-inner"><div class="hand-card-overlay" style="background:${fc}"></div><span class="hand-card-emoji">${renderCardImage(card?.image||'',34)}</span></div>
       </div>`;
     }).join('')}
     ${p.hand.length===0?'<span class="empty-hand">핸드 없음</span>':''}
@@ -2011,7 +2019,7 @@ function renderModal(){
         <div class="card-select-grid">${p.graveyard.slice().reverse().map(id=>{
           const card=CARDDB[id];const fc=getFrameColor(card);
           return`<div class="pool-card" style="cursor:default;border:1.5px solid ${fc}40" onmouseenter="showTooltip(event,'${id}')" onmouseleave="hideTooltip()">
-            <div class="pool-card-img"><span style="font-size:1.5rem">${card?.image||'?'}</span></div>
+            <div class="pool-card-img">${renderCardImage(card?.image||'',52)}</div>
             <div class="pool-card-footer" style="background:${fc}cc;color:rgba(0,0,0,.85)">${card?.name||id}</div>
           </div>`;
         }).join('')}</div>
@@ -2029,7 +2037,7 @@ function renderModal(){
         <div class="card-select-grid">${p.hand.map((id,i)=>{
           const card=CARDDB[id];const fc=getFrameColor(card);const sel=m.selected.includes(i);
           return`<div class="pool-card" style="border:2px solid ${sel?'var(--gold)':fc+'40'};cursor:pointer" onclick="toggleDiscard(${i})" onmouseenter="showTooltip(event,'${id}')" onmouseleave="hideTooltip()">
-            <div class="pool-card-img"><span style="font-size:1.5rem">${card?.image||'?'}</span></div>
+            <div class="pool-card-img">${renderCardImage(card?.image||'',52)}</div>
             <div class="pool-card-footer" style="background:${fc}cc;color:rgba(0,0,0,.85)">${card?.name||id}</div>
           </div>`;
         }).join('')}</div>
@@ -2048,7 +2056,7 @@ function renderModal(){
           if(!fc)return'';
           const card=CARDDB[fc.cardId];const frameC=getFrameColor(card);const sel=m.selected.includes(i);
           return`<div class="pool-card" style="border:2px solid ${sel?'var(--gold)':frameC+'40'};cursor:pointer" onclick="toggleTargetSelect(${i})" onmouseenter="showTooltip(event,'${fc.cardId}')" onmouseleave="hideTooltip()">
-            <div class="pool-card-img"><span style="font-size:1.5rem">${card?.image||'?'}</span></div>
+            <div class="pool-card-img">${renderCardImage(card?.image||'',52)}</div>
             <div class="pool-card-footer" style="background:${frameC}cc;color:rgba(0,0,0,.85)">${card?.name||fc.cardId}</div>
           </div>`;
         }).join('')}</div>
@@ -2073,7 +2081,7 @@ function renderModal(){
           if(poolIds&&!poolIds.includes(id))return'';
           const fc=getFrameColor(card);
           return`<div class="pool-card" style="cursor:pointer;border:1.5px solid ${fc}60" onclick="confirmGYSelect('${id}',${i})" onmouseenter="showTooltip(event,'${id}')" onmouseleave="hideTooltip()">
-            <div class="pool-card-img"><span style="font-size:1.5rem">${card?.image||'?'}</span></div>
+            <div class="pool-card-img">${renderCardImage(card?.image||'',52)}</div>
             <div class="pool-card-footer" style="background:${fc}cc;color:rgba(0,0,0,.85)">${card?.name}</div>
           </div>`;
         }).join('')}</div>
@@ -2392,8 +2400,10 @@ function deleteSavedDeck(name){
 function startDuelWithDeck(){
   const deck=App.db.currentDeck;
   const mainIds=deck.main.flatMap(x=>Array(x.qty).fill(x.id));
+  // Bug1 fix: extra deck도 같이 전달
+  const extraIds=(deck.extra||[]).flatMap(x=>Array(x.qty).fill(x.id));
   if(mainIds.length<20){if(!confirm(`덱이 ${mainIds.length}장입니다. 시작하시겠습니까?`))return;}
-  startDuel(mainIds.length>0?mainIds:buildAIDeck());
+  startDuel(mainIds.length>0?[...mainIds,...extraIds]:buildAIDeck());
 }
 function quickStart(){startDuel(buildAIDeck());}
 
@@ -2434,6 +2444,18 @@ function openSetSelectModal(){
 // ══════════════════════════════════════════
 // START
 // ══════════════════════════════════════════
+// ─── CARD IMAGE RENDERER ─────────────────────────────────────
+// 이모지, URL, base64 모두 처리
+function renderCardImage(imageVal, sizePx, extraStyle='') {
+  if (!imageVal) return `<span style="font-size:${Math.round(sizePx*0.55)}px;color:#666">?</span>`;
+  const isUrl = imageVal.startsWith('http') || imageVal.startsWith('data:');
+  if (isUrl) {
+    return `<img src="${imageVal}" alt="" style="width:${sizePx}px;height:${Math.round(sizePx*1.35)}px;object-fit:cover;border-radius:2px;display:block;${extraStyle}" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<span style=\'font-size:14px\'>🖼</span>')">`;
+  }
+  const fs = Math.round(sizePx * (imageVal.length > 2 ? 0.52 : 0.68));
+  return `<span style="font-size:${fs}px;line-height:1;display:block;text-align:center;${extraStyle}">${imageVal}</span>`;
+}
+
 init();
 </script>
 </body>
