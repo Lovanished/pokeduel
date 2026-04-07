@@ -365,8 +365,8 @@ function onPhaseStart() {
     activeP().monsterZones.forEach(z=>{ if(z) z.canAttack=z.summonedThisTurn?false:true; });
   }
   if(dv.phase==='BATTLE'){
-    // Allow attacking for monsters that can
-    activeP().monsterZones.forEach(z=>{ if(z&&!z.summonedThisTurn) z.canAttack=true; });
+    // Allow attacking for monsters that were NOT summoned this turn
+    activeP().monsterZones.forEach(z=>{ if(z) z.canAttack=!z.summonedThisTurn; });
   }
   if(dv.phase==='END'){
     const p = activeP();
@@ -458,14 +458,15 @@ function activateSpellTrap(handIdx, zoneIdx) {
   if(card.type==='spell'){
     addLog(`${card.name} 발동!`, 'special');
     fireEffects('on_activate', fc, 0);
-    // Normal spell goes to GY
+    // 일반/속공 마법만 발동 즉시 묘지로
     if(card.subtype==='normal'||card.subtype==='quickplay'){
       player().spellZones[zoneIdx]=null;
       player().graveyard.push(cardId);
     }
   } else {
+    // 함정은 항상 뒷면으로 세트 — 발동은 activateTrap()에서 처리
+    fc.faceUp=false;
     addLog(`함정 카드 세트.`);
-    fc.faceUp=false; // trap sets face down
   }
 }
 
@@ -477,10 +478,12 @@ function activateTrap(zoneIdx) {
   fc.faceUp=true;
   addLog(`${card.name} 발동!`, 'special');
   fireEffects('on_activate', fc, 0);
-  if(card.subtype==='normal'){
+  // 일반·카운터 함정은 발동 후 묘지로, 지속 함정은 필드에 잔류
+  if(card.subtype==='normal'||card.subtype==='counter'){
     player().spellZones[zoneIdx]=null;
     player().graveyard.push(fc.cardId);
   }
+  render();
 }
 
 function sendToGY(pi, zone, idx) {
@@ -659,7 +662,7 @@ function aiMain() {
 function aiBattle() {
   const e=enemy();
   e.monsterZones.forEach((atkFC,ai)=>{
-    if(!atkFC||atkFC.attacked||atkFC.summonedThisTurn) return;
+    if(!atkFC||atkFC.attacked||atkFC.summonedThisTurn||!atkFC.canAttack) return;
     const atkCard=CARDDB[atkFC.cardId];
     const atk=(atkCard?.atk||0)+(atkFC._atkBoost||0);
     const targets=player().monsterZones.map((z,i)=>({z,i})).filter(({z})=>z);
@@ -1039,13 +1042,12 @@ function renderSide(pi, dv, isMyTurn, isEnemy) {
 
 function renderZone(fieldCard, zoneClass, pi, zoneType, zoneIdx, isMyTurn, isEnemy) {
   const attacking=App.ui.attackingZone;
-  const isAttackTarget=!isEnemy&&attacking&&isEnemy===false?false:(attacking&&isEnemy&&zoneType==='monster');
   let extraClass='';
   let onclick='';
 
   if(!fieldCard){
     // Empty zone click logic
-    if(!isEnemy && isMyTurn && App.ui.selectedHand!==null){
+    if(!isEnemy && isMyTurn && App.ui.selectedHand!==null && !attacking){
       const dv=d();
       if((dv.phase==='MAIN1'||dv.phase==='MAIN2')&&dv.activePlayer===0){
         if(zoneType==='monster') { extraClass='pulse'; onclick=`onEmptyMonsterClick(${zoneIdx})`; }
@@ -1173,49 +1175,54 @@ function renderActionBar(dv, isMyTurn) {
 }
 
 // ── TOOLTIP ───────────────────────────────
+// 툴팁은 render()와 완전히 분리된 독립 DOM 요소로 관리
+function getOrCreateTooltipEl() {
+  let el = document.getElementById('_tooltip_fixed');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = '_tooltip_fixed';
+    el.className = 'tooltip';
+    el.style.display = 'none';
+    document.body.appendChild(el);
+  }
+  return el;
+}
+
 function showTooltip(event, cardId) {
-  const card=CARDDB[cardId];
-  if(!card) return;
-  App.tooltip={cardId, x:event.clientX, y:event.clientY};
-  const tip=document.querySelector('.tooltip');
-  if(tip) positionTooltip(tip, event.clientX, event.clientY);
-  else render();
-}
-
-function hideTooltip() {
-  App.tooltip=null;
-  const tip=document.querySelector('.tooltip');
-  if(tip) tip.style.display='none';
-}
-
-function positionTooltip(el, x, y) {
-  el.style.display='block';
-  const left=x>window.innerWidth-250?x-240:x+12;
-  el.style.left=left+'px';
-  el.style.top=Math.min(y+10, window.innerHeight-360)+'px';
-}
-
-function renderTooltip() {
-  if(!App.tooltip) return '';
-  const {cardId, x, y} = App.tooltip;
-  const card=CARDDB[cardId];
-  if(!card) return '';
-  const fc=getFrameColor(card);
-  const left=x>window.innerWidth-250?x-240:x+12;
-  const top=Math.min(y+10, window.innerHeight-360);
-  return `<div class="tooltip" style="left:${left}px;top:${top}px">
+  const card = CARDDB[cardId];
+  if (!card) return;
+  App.tooltip = { cardId };
+  const el = getOrCreateTooltipEl();
+  const fc = getFrameColor(card);
+  el.innerHTML = `
     <div class="tooltip-top" style="background:${fc}"></div>
     <div class="tooltip-body">
       <div class="tooltip-name">${card.name}</div>
-      <div class="tooltip-type">${{monster:'몬스터',spell:'마법',trap:'함정'}[card.type]} · ${card.subtype||''} ${card.type==='monster'?`· ★${card.level||0} · ${card.attribute||''} / ${card.race||''}`:''}</div>
+      <div class="tooltip-type">${{monster:'몬스터',spell:'마법',trap:'함정'}[card.type]||card.type} · ${card.subtype||''} ${card.type==='monster'?`· ★${card.level||0} · ${card.attribute||''} / ${card.race||''}`:''}</div>
       ${card.type==='monster'?`<div class="tooltip-stats"><span class="tooltip-atk">ATK ${card.atk??'?'}</span><span class="tooltip-def">DEF ${card.def??'?'}</span></div>`:''}
       <div class="tooltip-desc">${card.desc||''}</div>
       ${(card.effects||[]).length>0?`<div class="tooltip-effects">
         ${card.effects.map(e=>`<div class="effect-chip">◈ ${e.description||e.trigger}</div>`).join('')}
       </div>`:''}
-    </div>
-  </div>`;
+    </div>`;
+  el.style.display = 'block';
+  positionTooltip(el, event.clientX, event.clientY);
 }
+
+function hideTooltip() {
+  App.tooltip = null;
+  const el = document.getElementById('_tooltip_fixed');
+  if (el) el.style.display = 'none';
+}
+
+function positionTooltip(el, x, y) {
+  const left = x > window.innerWidth - 250 ? x - 240 : x + 12;
+  el.style.left = left + 'px';
+  el.style.top = Math.min(y + 10, window.innerHeight - 360) + 'px';
+}
+
+// render()에서 호출되는 인라인 툴팁은 빈 문자열 반환 (독립 DOM으로 대체)
+function renderTooltip() { return ''; }
 
 // ── CONTEXT MENU ──────────────────────────
 function renderCtxMenu() {
@@ -1397,7 +1404,7 @@ function activateSelectedSpell() {
 }
 
 function toBattle() {
-  player().monsterZones.forEach(z=>{ if(z&&!z.summonedThisTurn) z.canAttack=true; });
+  // canAttack은 BATTLE 페이즈 시작 시 onPhaseStart에서 처리됨
   d().phase='MAIN1';
   nextPhase();
 }
@@ -1462,7 +1469,7 @@ function attachGlobalHandlers() {
     if(App.ctxMenu && !e.target.closest('.ctxmenu')){ closeCtx(); }
   },{once:true});
   document.addEventListener('mousemove', (e)=>{
-    const tip=document.querySelector('.tooltip');
+    const tip = document.getElementById('_tooltip_fixed');
     if(tip && App.tooltip) positionTooltip(tip, e.clientX, e.clientY);
   });
 }
