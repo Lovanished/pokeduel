@@ -110,11 +110,15 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .phase-label{font-family:var(--cinzel);font-size:.82rem;color:var(--gold);letter-spacing:.12em}
 .turn-label{font-size:.68rem;color:var(--muted);margin-top:.1rem}
 
-/* Field */
+/* Field — 스케일은 .field-scaler transform으로만 처리, font-size 변경 없음 */
+.field-scaler-wrap{width:100%;overflow:hidden;display:flex;justify-content:center}
+.field-scaler{transform-origin:top center;transition:transform .2s;width:100%}
 .field{display:grid;grid-template-rows:1fr 6px 1fr;gap:.3rem}
 .field-side{display:grid;grid-template-rows:auto auto;gap:.3rem}
-.field-main-area{display:grid;grid-template-columns:44px 1fr 44px;gap:.25rem}
+/* extra-deck zone 포함: 44px side + extra-zone col + 5×monster + extra-zone col + 44px side */
+.field-main-area{display:grid;grid-template-columns:44px 36px 1fr 36px 44px;gap:.25rem}
 .zone-col{display:flex;flex-direction:column;gap:.25rem;justify-content:center}
+.extra-col{display:flex;flex-direction:column;gap:.25rem;justify-content:center}
 .monster-row,.spell-row{display:grid;grid-template-columns:repeat(5,1fr);gap:.25rem}
 .field-divider{background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.25;border-radius:2px}
 
@@ -215,6 +219,16 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 
 /* Summon mode indicator */
 .summon-mode-bar{background:var(--bg3);border:1px solid var(--gold);border-radius:3px;padding:.35rem .7rem;font-family:var(--cinzel);font-size:.72rem;color:var(--gold);letter-spacing:.06em;display:flex;align-items:center;gap:.6rem}
+/* Extra deck zone */
+.zone.extra-deck-zone{border-color:rgba(100,50,200,.4);background:rgba(60,20,120,.12)}
+.zone.extra-deck-zone:hover{border-color:rgba(150,80,255,.6);background:rgba(80,30,160,.2)}
+.extra-zone-label{font-size:.42rem;color:#9966ff;font-family:var(--cinzel);letter-spacing:.04em;text-align:center;line-height:1.3;pointer-events:none}
+/* Extra summon tabs */
+.extra-summon-tabs{display:flex;gap:.3rem;margin-bottom:.6rem;flex-wrap:wrap}
+.extra-summon-tab{padding:.25rem .6rem;font-family:var(--cinzel);font-size:.68rem;cursor:pointer;border:1px solid var(--border);border-radius:2px;color:var(--muted);transition:all .15s}
+.extra-summon-tab.on{border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,.08)}
+.material-slot{aspect-ratio:59/86;border:1px dashed var(--border2);border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:.6rem;color:var(--muted);cursor:pointer;transition:all .15s;font-family:var(--cinzel)}
+.material-slot.filled{border-color:var(--gold);background:rgba(201,168,76,.08)}
 </style>
 </head>
 <body>
@@ -275,30 +289,41 @@ function newPlayerState(name,deckIds,isAI){
     monsterZones:[null,null,null,null,null],
     spellZones:[null,null,null,null,null],
     fieldZone:null,graveyard:[],banished:[],
-    // Per-turn flags per field card uid
+    extraDeck:[],  // 융합/싱크로/엑시즈/링크 카드 (덱 분리 후 채워짐)
     usedEffectsThisTurn:new Set(),
   };
 }
 
 function startDuel(playerDeckIds){
+  // 엑스트라 덱 카드(융합/싱크로/엑시즈/링크)를 main deck에서 분리
+  function splitDeck(ids){
+    const mainIds=[], extraIds=[];
+    ids.forEach(id=>{const c=CARDDB[id];(c&&isExtraType(c)?extraIds:mainIds).push(id);});
+    return{mainIds,extraIds};
+  }
+  const playerSplit=splitDeck(playerDeckIds);
+  const aiDeckRaw=buildAIDeck();
+  const aiSplit=splitDeck(aiDeckRaw);
+
   App.duel={
     turn:1,activePlayer:0,phase:'DRAW',
     normalSummonDone:false,
     players:[
-      newPlayerState('YOU',playerDeckIds,false),
-      newPlayerState('AI',buildAIDeck(),true),
+      newPlayerState('YOU',playerSplit.mainIds,false),
+      newPlayerState('AI',aiSplit.mainIds,true),
     ],
-    lastResult:null,   // store deck ids for rematch
+    lastResult:null,
   };
+  // 엑스트라 덱 주입
+  App.duel.players[0].extraDeck=playerSplit.extraIds;
+  App.duel.players[1].extraDeck=aiSplit.extraIds;
   App.duel.lastResult=playerDeckIds;
   App.result=null;
   App.logs=[];
-  App.ui={selectedHand:null,summonMode:false,summonType:null,attackingZone:null,targetMode:null,chainQueue:null};
-  // Draw 5
+  App.ui={selectedHand:null,summonMode:false,summonType:null,attackingZone:null,targetMode:null,chainQueue:null,extraSummonModal:null};
   doDrawCard(0,5); doDrawCard(1,5);
   addLog('듀얼 시작! 선공: YOU','special');
   App.screen='duel';
-  // Start from DRAW phase - auto advance through DRAW/STANDBY
   handlePhaseStart();
   render();
 }
@@ -787,30 +812,7 @@ function executeActionWithUI(action,ctx,pi,callback){
       break;
     }
     case 'special_summon':{
-      const fromGY=action.target==='from_gy';
-      if(fromGY){
-        // Find summonable monsters in GY
-        const gyMonsters=p.graveyard.map((id,i)=>({id,i})).filter(({id})=>{
-          const c=CARDDB[id];return c&&isMonster(c)&&!isExtraType(c)&&!c.noSpecialSummon;
-        });
-        if(gyMonsters.length===0){addLog('묘지에 특수 소환 가능한 몬스터가 없습니다.');return callback&&callback();}
-        if(pi===0){
-          // Open GY selection modal
-          openGYSelectModal('특수 소환할 몬스터를 선택하세요',p.graveyard,(selectedId,selectedGYIdx)=>{
-            p.graveyard.splice(selectedGYIdx,1);
-            specialSummon(selectedId,pi);
-            callback&&callback();
-          });
-        }else{
-          // AI picks highest ATK
-          const best=gyMonsters.sort((a,b)=>(CARDDB[b.id]?.atk||0)-(CARDDB[a.id]?.atk||0))[0];
-          p.graveyard.splice(best.i,1);
-          specialSummon(best.id,pi);
-          return callback&&callback();
-        }
-      }else{
-        return callback&&callback();
-      }
+      executeSpecialSummonAction(action,ctx,pi,callback);
       break;
     }
     default:
@@ -828,8 +830,8 @@ function openTargetSelectModal(title,zones,count,multiSelect,callback){
   render();
 }
 
-function openGYSelectModal(title,graveyard,callback){
-  App.modal={type:'gySelect',title,graveyard,callback};
+function openGYSelectModal(title,graveyard,callback,poolIds){
+  App.modal={type:'gySelect',title,graveyard,callback,poolIds:poolIds||null};
   render();
 }
 
@@ -1000,6 +1002,7 @@ function resolveAttack(atkZoneIdx,defZoneIdx){
         player().lp=Math.max(0,player().lp-diff);
         showPopup(diff,'player');
         addLog(`${atkCard?.name} 전투 패배! -${diff}`,'danger');
+        d()._lastTookBattleDamage=true; // 전투 데미지 플래그
         sendToGY(0,'monster',atkZoneIdx);
       }else{
         addLog(`${atkCard?.name} 공격 막힘 (ATK ${atk} vs DEF ${defVal})`);
@@ -1025,11 +1028,359 @@ function sendToGY(pi,zone,idx){
   fireTriggers('on_send_to_gy',fc,pi);
 }
 
+// ══════════════════════════════════════════
+// EXTRA DECK SUMMON SYSTEM (Bug 2)
+// ══════════════════════════════════════════
+// 엑스트라 소환 타입별 소재 요건
+const EXTRA_SUMMON_REQS={
+  fusion:{
+    label:'융합 소환',color:'#6a3a8a',
+    // 패/필드의 카드를 소재로 사용 (소재 id 배열 매칭)
+    canSummon(card,pi){
+      const p=P(pi);
+      const mats=card.fusionMaterials||[];
+      if(!mats.length)return{ok:false,reason:'소재 정보 없음'};
+      // 패+필드에서 소재 전부 있는지 확인
+      const avail=[...p.hand,...p.monsterZones.filter(z=>z).map(z=>z.cardId)];
+      const missing=mats.filter(id=>!avail.includes(id));
+      if(missing.length){
+        const names=missing.map(id=>CARDDB[id]?.name||id).join(', ');
+        return{ok:false,reason:`소재 부족: ${names}`};
+      }
+      return{ok:true};
+    },
+    doSummon(card,pi,callback){
+      const p=P(pi);
+      const mats=card.fusionMaterials||[];
+      // 패에서 소재 제거
+      mats.forEach(matId=>{
+        const hi=p.hand.indexOf(matId);
+        if(hi>-1){p.graveyard.push(p.hand.splice(hi,1)[0]);return;}
+        // 필드에서
+        const mi=p.monsterZones.findIndex(z=>z&&z.cardId===matId);
+        if(mi>-1){sendToGY(pi,'monster',mi);}
+      });
+      addLog(`융합 소환: ${card.name}!`,'special');
+      callback&&callback();
+    }
+  },
+  synchro:{
+    label:'싱크로 소환',color:'#d0d0d0',
+    canSummon(card,pi){
+      const p=P(pi);
+      const lvNeeded=card.level||0;
+      // 필드의 튜너 1체 + 비튜너 N체 레벨 합산
+      const tuners=p.monsterZones.filter(z=>z&&CARDDB[z.cardId]?.isTuner);
+      const nonTuners=p.monsterZones.filter(z=>z&&z.faceUp&&!CARDDB[z.cardId]?.isTuner);
+      if(!tuners.length)return{ok:false,reason:'튜너 몬스터 없음'};
+      if(!nonTuners.length)return{ok:false,reason:'비튜너 몬스터 없음'};
+      // 레벨 합산으로 딱 맞는 조합 있는지 체크
+      const tunerLvs=tuners.map(z=>CARDDB[z.cardId]?.level||0);
+      const nonLvs=nonTuners.map(z=>CARDDB[z.cardId]?.level||0);
+      const canMatch=tunerLvs.some(tl=>nonLvs.some(nl=>tl+nl===lvNeeded));
+      if(!canMatch)return{ok:false,reason:`레벨 합산 ${lvNeeded} 조합 불가`};
+      return{ok:true};
+    },
+    doSummon(card,pi,callback){
+      const p=P(pi); const lvNeeded=card.level||0;
+      const tuners=p.monsterZones.map((z,i)=>({z,i})).filter(({z})=>z&&CARDDB[z?.cardId]?.isTuner);
+      const nonTuners=p.monsterZones.map((z,i)=>({z,i})).filter(({z})=>z&&z.faceUp&&!CARDDB[z?.cardId]?.isTuner);
+      // 첫 번째 유효 조합 자동 선택
+      let chosen=null;
+      outer:for(const t of tuners){
+        const tl=CARDDB[t.z.cardId]?.level||0;
+        for(const nt of nonTuners){
+          const nl=CARDDB[nt.z.cardId]?.level||0;
+          if(tl+nl===lvNeeded){chosen={t,nt};break outer;}
+        }
+      }
+      if(!chosen){addLog('싱크로 소환 소재 조합 없음.');return;}
+      sendToGY(pi,'monster',chosen.t.i);
+      sendToGY(pi,'monster',chosen.nt.i);
+      addLog(`싱크로 소환: ${card.name}!`,'special');
+      callback&&callback();
+    }
+  },
+  xyz:{
+    label:'엑시즈 소환',color:'#1a1a1a',
+    canSummon(card,pi){
+      const p=P(pi); const rank=card.level||0;
+      const same=p.monsterZones.filter(z=>z&&z.faceUp&&(CARDDB[z.cardId]?.level||0)===rank);
+      if(same.length<2)return{ok:false,reason:`랭크${rank} 몬스터 2체 이상 필요`};
+      return{ok:true};
+    },
+    doSummon(card,pi,callback){
+      const p=P(pi); const rank=card.level||0;
+      const mats=p.monsterZones.map((z,i)=>({z,i})).filter(({z})=>z&&z.faceUp&&(CARDDB[z?.cardId]?.level||0)===rank);
+      // 2체 릴리스
+      mats.slice(0,2).forEach(({i})=>sendToGY(pi,'monster',i));
+      addLog(`엑시즈 소환: ${card.name}!`,'special');
+      callback&&callback();
+    }
+  },
+  link:{
+    label:'링크 소환',color:'#0a4a8a',
+    canSummon(card,pi){
+      const p=P(pi); const rating=card.level||1; // link rating
+      const avail=p.monsterZones.filter(z=>z&&z.faceUp&&!isExtraType(CARDDB[z?.cardId]));
+      if(avail.length<rating)return{ok:false,reason:`링크 소재 ${rating}체 필요 (현재 ${avail.length}체)`};
+      return{ok:true};
+    },
+    doSummon(card,pi,callback){
+      const p=P(pi); const rating=card.level||1;
+      const mats=p.monsterZones.map((z,i)=>({z,i})).filter(({z})=>z&&z.faceUp&&!isExtraType(CARDDB[z?.cardId]));
+      mats.slice(0,rating).forEach(({i})=>sendToGY(pi,'monster',i));
+      addLog(`링크 소환: ${card.name}!`,'special');
+      callback&&callback();
+    }
+  }
+};
+
+function openExtraSummonModal(){
+  const dv=d();
+  if(dv.phase!=='MAIN1'&&dv.phase!=='MAIN2'){addLog('메인 페이즈에만 엑스트라 소환 가능!');return;}
+  if(dv.activePlayer!==0){addLog('자신의 턴이 아닙니다!');return;}
+  const p=player();
+  if(!p.extraDeck||!p.extraDeck.length){addLog('엑스트라 덱이 비어있습니다!');return;}
+  if(!p.monsterZones.some(z=>z===null)){addLog('몬스터 존이 가득 찼습니다!');return;}
+  App.ui.extraSummonModal={tab:'fusion'};
+  render();
+}
+
+function doExtraSummon(cardId){
+  const card=CARDDB[cardId];
+  if(!card)return;
+  const subtype=card.subtype;
+  const req=EXTRA_SUMMON_REQS[subtype];
+  if(!req){addLog(`${subtype} 소환은 지원되지 않습니다.`);return;}
+  const check=req.canSummon(card,0);
+  if(!check.ok){addLog(`소환 불가: ${check.reason}`,'danger');return;}
+  req.doSummon(card,0,()=>{
+    // 엑스트라 덱에서 제거 후 필드에 소환
+    const p=player();
+    const ei=p.extraDeck.indexOf(cardId);
+    if(ei>-1)p.extraDeck.splice(ei,1);
+    const slot=p.monsterZones.findIndex(z=>z===null);
+    if(slot===-1){addLog('몬스터 존이 가득 찼습니다!');return;}
+    const fc=createFieldCard(cardId,'ATK',true);
+    fc.summonedThisTurn=true;fc.canAttack=false;
+    p.monsterZones[slot]=fc;
+    fireTriggers('on_summon',fc,0);
+    fireTriggers('on_special_summon',fc,0);
+    checkLPWin();
+  });
+  App.ui.extraSummonModal=null;
+  render();
+}
+
+// ══════════════════════════════════════════
+// SPECIAL SUMMON SCHEMA (Bug 4)
+// ══════════════════════════════════════════
+// special_summon action의 확장 스키마:
+// {
+//   type: 'special_summon',
+//   ss_source: 'gy'|'hand'|'deck'|'banished'|'token'|'self',
+//   ss_target_player: 'self'|'opponent'|'both',  // 누구 묘지/패에서
+//   ss_filter: 'any'|'monster'|specific card id or array,
+//   ss_count: number,
+//   ss_position: 'ATK'|'DEF'|'facedown',
+//   ss_negate_effect: boolean,  // 소환된 몬스터의 효과 무효화
+//   ss_cannot_attack: boolean,  // 소환된 턴 공격 불가 여부 (기본 true)
+//   ss_condition: string,       // 추가 조건 JS 표현식 (기존 condition과 별개)
+//   target: 'from_gy'          // 하위 호환
+// }
+
+function executeSpecialSummonAction(action,ctx,pi,callback){
+  const p=ctx.state.players[pi];
+  const opp=ctx.state.players[1-pi];
+  const source=action.ss_source||(action.target==='from_gy'?'gy':'hand');
+  const targetPlayer=action.ss_target_player==='opponent'?opp:p;
+  const count=action.ss_count||1;
+  const position=action.ss_position||'ATK';
+  const negateEff=action.ss_negate_effect||false;
+
+  // ss_condition 체크 (게임 상태 기반 추가 조건)
+  if(action.ss_condition){
+    try{
+      const ok=new Function('ctx','state',`return(${action.ss_condition})`)(ctx,ctx.state);
+      if(!ok){addLog('특수 소환 조건 미충족.','danger');return callback&&callback();}
+    }catch{addLog('특수 소환 조건 오류.','danger');return callback&&callback();}
+  }
+
+  // 소환 대상 풀 구성
+  let pool=[];
+  if(source==='gy')      pool=targetPlayer.graveyard.map((id,i)=>({id,i,from:'gy'})).filter(({id})=>CARDDB[id]&&isMonster(CARDDB[id])&&!CARDDB[id].noSpecialSummon);
+  else if(source==='hand') pool=targetPlayer.hand.map((id,i)=>({id,i,from:'hand'})).filter(({id})=>CARDDB[id]&&isMonster(CARDDB[id])&&!CARDDB[id].noSpecialSummon);
+  else if(source==='banished') pool=targetPlayer.banished.map((id,i)=>({id,i,from:'banished'})).filter(({id})=>CARDDB[id]&&isMonster(CARDDB[id]));
+  else if(source==='token'){
+    // 토큰 생성 (즉시 실행)
+    doSpecialSummonCard('token_'+(Date.now()),pi,position,negateEff,null);
+    return callback&&callback();
+  }
+
+  // ss_filter 적용
+  if(action.ss_filter&&action.ss_filter!=='any'&&action.ss_filter!=='monster'){
+    const ids=Array.isArray(action.ss_filter)?action.ss_filter:[action.ss_filter];
+    pool=pool.filter(({id})=>ids.includes(id));
+  }
+
+  if(!pool.length){addLog('특수 소환 가능한 몬스터가 없습니다.');return callback&&callback();}
+
+  // 플레이어 선택 or AI 자동
+  if(pi===0){
+    // gy/hand 선택 모달
+    const modalGY=targetPlayer.graveyard;
+    const modalHand=targetPlayer.hand;
+    if(source==='gy'){
+      openGYSelectModal('특수 소환할 몬스터 선택',modalGY,(selId,selIdx)=>{
+        targetPlayer.graveyard.splice(selIdx,1);
+        doSpecialSummonCard(selId,pi,position,negateEff,action);
+        callback&&callback();
+      },pool.map(x=>x.id));
+    }else{
+      // 핸드에서 선택
+      App.modal={
+        type:'gySelect',title:'특수 소환할 몬스터 선택',
+        graveyard:modalHand,
+        poolIds:pool.map(x=>x.id),
+        callback:(selId,selIdx)=>{
+          targetPlayer.hand.splice(selIdx,1);
+          doSpecialSummonCard(selId,pi,position,negateEff,action);
+          callback&&callback();
+        }
+      };
+      render();
+    }
+  }else{
+    // AI: 가장 ATK 높은 것
+    const best=pool.sort((a,b)=>(CARDDB[b.id]?.atk||0)-(CARDDB[a.id]?.atk||0))[0];
+    if(source==='gy')targetPlayer.graveyard.splice(best.i,1);
+    else if(source==='hand')targetPlayer.hand.splice(best.i,1);
+    else if(source==='banished')targetPlayer.banished.splice(best.i,1);
+    doSpecialSummonCard(best.id,pi,position,negateEff,action);
+    return callback&&callback();
+  }
+}
+
+function doSpecialSummonCard(cardId,pi,position,negateEff,action){
+  const p=P(pi);
+  const card=CARDDB[cardId];
+  const slot=p.monsterZones.findIndex(z=>z===null);
+  if(slot===-1){addLog('몬스터 존 가득!');return;}
+  const faceUp=position!=='facedown';
+  const fc=createFieldCard(cardId,position==='facedown'?'DEF':position,faceUp);
+  fc.summonedThisTurn=true;fc.canAttack=false;
+  if(negateEff)fc._effectNegated=true;
+  p.monsterZones[slot]=fc;
+  addLog(`${card?.name||cardId} 특수 소환!`,'special');
+  fireTriggers('on_summon',fc,pi);
+  fireTriggers('on_special_summon',fc,pi);
+  checkLPWin();
+}
+
+// ══════════════════════════════════════════
+// MANUAL EFFECT CONDITION SYSTEM (Bug 5)
+// ══════════════════════════════════════════
+// effect 스키마 추가 필드:
+// activationLocation: 'field'(기본)|'hand'|'gy'  — 어디서 발동하는가
+// chainable: false(기본, 체인2이상 불가)|true(속공, 체인 가능)
+// activationScope: 'own_turn'(기본)|'either_turn'|'opponent_turn'
+//
+// 조건 예: "상대 필드에 앞면 표시 카드 n장 이상" 등
+// 내장 조건 함수로 처리 (JS 표현식 대신)
+
+const BUILTIN_CONDITIONS={
+  // 상대 필드 카드 수 조건
+  opp_field_count_ge(n,ctx){
+    const opp=ctx.state.players[1-ctx.controller];
+    const cnt=[...opp.monsterZones,...opp.spellZones].filter(z=>z&&z.faceUp).length;
+    return cnt>=n;
+  },
+  opp_monster_count_ge(n,ctx){
+    return ctx.state.players[1-ctx.controller].monsterZones.filter(z=>z).length>=n;
+  },
+  // LP 조건
+  my_lp_le(n,ctx){return ctx.state.players[ctx.controller].lp<=n;},
+  my_lp_ge(n,ctx){return ctx.state.players[ctx.controller].lp>=n;},
+  // 묘지 조건
+  my_gy_count_ge(n,ctx){return ctx.state.players[ctx.controller].graveyard.length>=n;},
+  // 전투 데미지 입은 직후 (상태 플래그)
+  took_battle_damage(ctx){return!!(ctx.state._lastTookBattleDamage);},
+  // 핸드 수
+  my_hand_count_le(n,ctx){return ctx.state.players[ctx.controller].hand.length<=n;},
+};
+
+function checkEffectActivationCondition(eff,fc,pi){
+  const ctx={state:d(),cardDB:CARDDB,controller:pi,sourceCard:fc};
+  const dv=d();
+  const isMyTurn=dv.activePlayer===pi;
+  const phase=dv.phase;
+  const inMain=phase==='MAIN1'||phase==='MAIN2';
+
+  // 1. activationLocation 체크
+  const loc=eff.activationLocation||'field';
+  if(loc==='field'){
+    // 카드가 필드 앞면 표시로 존재해야 함
+    const onField=dv.players[pi].monsterZones.some(z=>z&&z===fc&&z.faceUp)
+      ||dv.players[pi].spellZones.some(z=>z&&z===fc&&z.faceUp);
+    if(!onField&&fc)return{ok:false,reason:'필드에 앞면 표시 상태가 아닙니다'};
+  }else if(loc==='hand'){
+    if(!dv.players[pi].hand.includes(fc?.cardId))return{ok:false,reason:'패에 카드가 없습니다'};
+  }else if(loc==='gy'){
+    if(!dv.players[pi].graveyard.includes(fc?.cardId))return{ok:false,reason:'묘지에 카드가 없습니다'};
+  }
+
+  // 2. activationScope 체크
+  const scope=eff.activationScope||'own_turn';
+  if(scope==='own_turn'&&!isMyTurn)return{ok:false,reason:'자신의 턴에만 발동 가능'};
+  if(scope==='opponent_turn'&&isMyTurn)return{ok:false,reason:'상대 턴에만 발동 가능'};
+  // 'either_turn'은 제한 없음
+
+  // 메인 페이즈 한정 발동(chainable=false면 메인에만 발동 가능)
+  if(!eff.chainable&&loc==='field'&&!inMain&&isMyTurn)return{ok:false,reason:'메인 페이즈에만 발동 가능'};
+
+  // 3. 내장 조건 체크
+  if(eff.builtinConditions){
+    for(const bc of eff.builtinConditions){
+      const fn=BUILTIN_CONDITIONS[bc.type];
+      if(!fn)continue;
+      const ok=fn(bc.value,ctx);
+      if(!ok)return{ok:false,reason:bc.failReason||`조건 미충족: ${bc.type}`};
+    }
+  }
+
+  // 4. 기존 JS 표현식 condition 체크 (하위 호환)
+  if(eff.condition&&fc){
+    try{
+      const ok=new Function('ctx','state',`return(${eff.condition})`)(ctx,dv);
+      if(!ok)return{ok:false,reason:'발동 조건 미충족'};
+    }catch{return{ok:false,reason:'조건 확인 오류'};}
+  }
+
+  return{ok:true};
+}
+
+// canActivateEffect를 새 시스템으로 대체
+function canActivateEffect(eff,fc,pi,context){
+  if(eff.trigger==='continuous')return false;
+  if(eff.once&&fc&&fc._usedEffects?.includes(eff.id))return false;
+  const result=checkEffectActivationCondition(eff,fc,pi);
+  return result.ok;
+}
+
+// 효과 발동 불가 사유 반환 (UI용)
+function getEffectBlockReason(eff,fc,pi){
+  if(eff.once&&fc&&fc._usedEffects?.includes(eff.id))return'이미 사용됨 (1회 제한)';
+  const result=checkEffectActivationCondition(eff,fc,pi);
+  return result.ok?null:result.reason;
+}
+
 function checkLPWin(){
   if(!d())return;
   if(player().lp<=0){endDuel(1);}
   else if(enemy().lp<=0){endDuel(0);}
 }
+
 
 // ══════════════════════════════════════════
 // AI ENGINE
@@ -1197,8 +1548,13 @@ function applyUIScale(scale){
   document.documentElement.style.setProperty('--ui-scale',scale);
   document.documentElement.style.setProperty('--card-min',cardMin);
   document.documentElement.style.setProperty('--hand-card-w',handW);
-  // 폰트 스케일
-  document.documentElement.style.fontSize=(scale*100)+'%';
+  // 필드 영역만 transform scale로 스케일링 (폰트 크기는 변경하지 않음)
+  const scaler=document.querySelector('.field-scaler');
+  if(scaler){
+    scaler.style.transform=`scale(${scale})`;
+    // 스케일 줄면 높이 보정
+    scaler.style.marginBottom=(scale<1?`${Math.round((scale-1)*scaler.offsetHeight)}px`:'0');
+  }
 }
 
 // ── DECK BUILDER ──
@@ -1357,20 +1713,34 @@ function renderTopBar(dv){
 }
 
 function renderField(dv,isMyTurn){
-  return`<div class="field">
-    ${renderSide(1,dv,isMyTurn,true)}
-    <div class="field-divider"></div>
-    ${renderSide(0,dv,isMyTurn,false)}
+  const scale=parseFloat(localStorage.getItem('ui_scale')||'0.82');
+  return`<div class="field-scaler-wrap">
+    <div class="field-scaler" id="field-scaler" style="transform:scale(${scale});transform-origin:top center">
+      <div class="field">
+        ${renderSide(1,dv,isMyTurn,true)}
+        <div class="field-divider"></div>
+        ${renderSide(0,dv,isMyTurn,false)}
+      </div>
+    </div>
   </div>`;
 }
 
 function renderSide(pi,dv,isMyTurn,isEnemy){
   const p=P(pi);
+  const extraDeckCount=p.extraDeck?p.extraDeck.length:0;
   const mRows=isEnemy?
     `<div class="spell-row" style="margin-bottom:.3rem">${p.spellZones.map((z,i)=>renderZone(z,'szone',pi,'spell',i,isMyTurn,isEnemy)).join('')}</div>
      <div class="monster-row">${p.monsterZones.map((z,i)=>renderZone(z,'mzone',pi,'monster',i,isMyTurn,isEnemy)).join('')}</div>`:
     `<div class="monster-row" style="margin-bottom:.3rem">${p.monsterZones.map((z,i)=>renderZone(z,'mzone',pi,'monster',i,isMyTurn,isEnemy)).join('')}</div>
      <div class="spell-row">${p.spellZones.map((z,i)=>renderZone(z,'szone',pi,'spell',i,isMyTurn,isEnemy)).join('')}</div>`;
+  // Extra deck zone — enemy에는 표시만, 플레이어에게만 클릭 가능
+  const extraZoneOnclick=(!isEnemy&&isMyTurn&&(dv.phase==='MAIN1'||dv.phase==='MAIN2')&&dv.activePlayer===0)?
+    `onclick="openExtraSummonModal()"` : '';
+  const extraZone=`<div class="zone extra-deck-zone ${extraZoneOnclick?'clickable':''}" style="cursor:${extraZoneOnclick?'pointer':'default'}" ${extraZoneOnclick}>
+    <div class="extra-zone-label">EXTRA<br>${extraDeckCount}</div>
+    <div class="zone-cnt">${extraDeckCount}</div>
+  </div>`;
+
   return`<div class="field-side">
     ${isEnemy?renderHandArea(p,true):''}
     <div class="field-main-area">
@@ -1379,7 +1749,9 @@ function renderSide(pi,dv,isMyTurn,isEnemy){
         ${renderGYZone(pi,p)}
         <div class="zone bz"><div>제외</div><div class="zone-cnt">${p.banished.length}</div></div>
       </div>
+      <div class="extra-col">${extraZone}</div>
       <div>${mRows}</div>
+      <div class="extra-col"></div>
       <div class="zone-col">
         <div class="zone" style="background:linear-gradient(135deg,#1a1a3a,#0c0c20)"><div style="font-size:1.2rem">🃏</div><div class="zone-cnt">${p.deck.length}</div></div>
       </div>
@@ -1425,6 +1797,9 @@ function renderZone(fieldCard,zoneClass,pi,zoneType,zoneIdx,isMyTurn,isEnemy){
   const card=CARDDB[fieldCard.cardId];
   const fc=getFrameColor(card);
   const isSelectedAtk=atk?.zoneIdx===zoneIdx&&!isEnemy&&zoneType==='monster';
+  // Fix 3: 상대 세트 카드는 tooltip 숨김
+  const showTip=!(isEnemy&&!fieldCard.faceUp);
+  const tipAttrs=showTip?`onmouseenter="showTooltip(event,'${fieldCard.cardId}')" onmouseleave="hideTooltip()"`:'';
 
   // Player monster zone interactions
   if(!isEnemy&&isMyTurn&&zoneType==='monster'){
@@ -1451,8 +1826,7 @@ function renderZone(fieldCard,zoneClass,pi,zoneType,zoneIdx,isMyTurn,isEnemy){
 
   return`<div class="zone ${zoneClass} ${extraClass} ${onclick?'clickable':''}"
     onclick="${onclick}"
-    onmouseenter="showTooltip(event,'${fieldCard.cardId}')"
-    onmouseleave="hideTooltip()"
+    ${tipAttrs}
     style="padding:0">
     <div class="fcard ${isDef?'def-pos':''} ${!fieldCard.faceUp?'facedown':''} ${isSelectedAtk?'fcard-sel':''}">
       <div class="fcard-frame-overlay" style="background:${fc}"></div>
@@ -1506,10 +1880,19 @@ function renderCardActionsPanel(dv,isMyTurn){
         btns.push(`<button class="btn btn-outline btn-sm" disabled>릴리스 불가 (${existingMonsters}/${trib})</button>`);
       }
     }
-    // Manual effects
+    // Manual effects — 불가 사유 표시 포함 (Bug 5)
     if(inMain){
-      const effs=(card.effects||[]).filter(e=>e.trigger==='manual'&&canActivateEffect(e,null,0,{}));
-      if(effs.length>0) btns.push(`<button class="btn btn-purple btn-sm" onclick="activateHandMonsterEffect(${idx})">효과 발동</button>`);
+      const allManual=(card.effects||[]).filter(e=>e.trigger==='manual');
+      allManual.forEach((eff,ei)=>{
+        const ok=canActivateEffect(eff,null,0,{});
+        const reason=ok?null:getEffectBlockReason(eff,null,0);
+        const label=eff.description||'효과 발동';
+        if(ok){
+          btns.push(`<button class="btn btn-purple btn-sm" onclick="activateHandMonsterEffect(${idx})" title="${label}">${label}</button>`);
+        }else{
+          btns.push(`<button class="btn btn-outline btn-sm" disabled title="${reason||'조건 미충족'}" style="opacity:.4;cursor:not-allowed">${label} (불가)</button>`);
+        }
+      });
     }
   }else if(isSpell(card)||isTrap(card)){
     if(inMain){
@@ -1522,6 +1905,11 @@ function renderCardActionsPanel(dv,isMyTurn){
         btns.push(`<button class="btn btn-gold btn-sm" onclick="activateHandSpell(${idx})">발동</button>`);
       }
     }
+  }
+
+  // 엑스트라 덱 소환 버튼 (플레이어 엑스트라 덱 있을 때)
+  if(inMain&&player().extraDeck?.length&&player().monsterZones.some(z=>z===null)&&App.ui.selectedHand===null){
+    btns.push(`<button class="btn btn-purple btn-sm" onclick="openExtraSummonModal()">엑스트라 소환</button>`);
   }
 
   if(btns.length===0)return'';
@@ -1674,12 +2062,15 @@ function renderModal(){
 
   if(m.type==='gySelect'){
     const gy=m.graveyard;
+    const poolIds=m.poolIds||null;
     return`<div class="modal-bg">
       <div class="modal-box">
         <div class="modal-title">${m.title}</div>
         <div class="modal-subtitle">카드를 클릭하여 선택</div>
         <div class="card-select-grid">${gy.map((id,i)=>{
-          const card=CARDDB[id];if(!card||!isMonster(card)||card.noSpecialSummon)return'';
+          const card=CARDDB[id];
+          if(!card||!isMonster(card)||card.noSpecialSummon)return'';
+          if(poolIds&&!poolIds.includes(id))return'';
           const fc=getFrameColor(card);
           return`<div class="pool-card" style="cursor:pointer;border:1.5px solid ${fc}60" onclick="confirmGYSelect('${id}',${i})" onmouseenter="showTooltip(event,'${id}')" onmouseleave="hideTooltip()">
             <div class="pool-card-img"><span style="font-size:1.5rem">${card?.image||'?'}</span></div>
@@ -1702,6 +2093,43 @@ function renderModal(){
           </div>`).join('')}
         </div>
         <div class="modal-actions"><button class="btn btn-outline" onclick="App.modal=null;render()">취소</button></div>
+      </div>
+    </div>`;
+  }
+
+  // 엑스트라 소환 모달 (Bug 2)
+  if(App.ui.extraSummonModal){
+    const esm=App.ui.extraSummonModal;
+    const p=player();
+    const tab=esm.tab||'fusion';
+    const tabs=['fusion','synchro','xyz','link'];
+    const tabCards=p.extraDeck.map(id=>({id,card:CARDDB[id]})).filter(({card})=>card&&card.subtype===tab);
+    return`<div class="modal-bg" onclick="App.ui.extraSummonModal=null;render()">
+      <div class="modal-box" onclick="event.stopPropagation()">
+        <div class="modal-title">엑스트라 덱 소환</div>
+        <div class="extra-summon-tabs">
+          ${tabs.map(t=>`<div class="extra-summon-tab ${tab===t?'on':''}" onclick="App.ui.extraSummonModal.tab='${t}';render()" style="${tab===t?'border-color:'+EXTRA_SUMMON_REQS[t]?.color+';color:'+EXTRA_SUMMON_REQS[t]?.color:''}">${EXTRA_SUMMON_REQS[t]?.label||t}</div>`).join('')}
+        </div>
+        <div class="modal-subtitle" style="margin-bottom:.5rem;font-size:.75rem;color:var(--muted)">
+          ${tab==='fusion'?'패/필드의 소재를 사용':tab==='synchro'?'필드의 튜너+비튜너 레벨 합산':tab==='xyz'?'같은 레벨 몬스터 2체 이상':tab==='link'?'필드의 비엑스트라 몬스터 사용':''}
+        </div>
+        <div class="card-select-grid">
+          ${tabCards.length?tabCards.map(({id,card})=>{
+            const fc=getFrameColor(card);
+            const req=EXTRA_SUMMON_REQS[tab];
+            const check=req?req.canSummon(card,0):{ok:false,reason:'미지원'};
+            return`<div class="pool-card" style="opacity:${check.ok?1:.4};cursor:${check.ok?'pointer':'default'}"
+              onclick="${check.ok?`doExtraSummon('${id}')`:''}"
+              onmouseenter="showTooltip(event,'${id}')" onmouseleave="hideTooltip()"
+              title="${check.ok?'클릭하여 소환':check.reason}">
+              <div class="pool-card-frame" style="background:${fc}"></div>
+              <div class="pool-card-img"><span style="font-size:1.5rem">${card.image||'?'}</span></div>
+              <div class="pool-card-footer" style="background:${fc}cc;color:rgba(0,0,0,.85)">${card.name}</div>
+              ${!check.ok?`<div style="position:absolute;bottom:24px;left:0;right:0;background:rgba(0,0,0,.7);font-size:.45rem;color:#ff9090;text-align:center;padding:1px 2px;font-family:var(--cinzel)">${check.reason}</div>`:''}
+            </div>`;
+          }).join(''):`<div style="color:var(--muted);font-size:.8rem;grid-column:1/-1;text-align:center;padding:1.5rem">${tab} 카드 없음</div>`}
+        </div>
+        <div class="modal-actions"><button class="btn btn-outline" onclick="App.ui.extraSummonModal=null;render()">닫기</button></div>
       </div>
     </div>`;
   }
@@ -1730,7 +2158,7 @@ function renderResult(){
 function returnToTitle(){
   document.querySelectorAll('.result-overlay').forEach(el=>el.remove());
   App.result=null;App.duel=null;App.screen='title';App.logs=[];
-  App.ui={selectedHand:null,summonMode:false,summonType:null,attackingZone:null,targetMode:null,chainQueue:null};
+  App.ui={selectedHand:null,summonMode:false,summonType:null,attackingZone:null,targetMode:null,chainQueue:null,extraSummonModal:null};
   render();
 }
 
@@ -1834,9 +2262,18 @@ function showFieldMonsterActions(event,zoneIdx){
   const fc=player().monsterZones[zoneIdx];if(!fc)return;
   const card=CARDDB[fc.cardId];if(!card)return;
   const items=[{label:'표시 방향 변경',action:`changePos(${zoneIdx})`}];
-  // Find activatable effects
-  const effs=(card.effects||[]).filter(e=>e.trigger==='manual'&&canActivateEffect(e,fc,0,{}));
-  if(effs.length>0)items.unshift({label:'효과 발동',action:`activateFieldMonsterEffect(${zoneIdx})`});
+  // 수동 효과 — 발동 가능한 것과 불가인 것 모두 표시 (Bug 5)
+  const allManual=(card.effects||[]).filter(e=>e.trigger==='manual');
+  allManual.forEach(eff=>{
+    const ok=canActivateEffect(eff,fc,0,{});
+    const reason=ok?null:getEffectBlockReason(eff,fc,0);
+    const label=eff.description||'효과 발동';
+    if(ok){
+      items.unshift({label:`◈ ${label}`,action:`activateFieldMonsterEffect(${zoneIdx})`});
+    }else{
+      items.push({label:`◈ ${label} (${reason||'불가'})`,action:'',cls:'disabled'});
+    }
+  });
   App.ctxMenu={x:event.clientX,y:event.clientY,items};render();
 }
 
