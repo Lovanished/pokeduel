@@ -207,6 +207,7 @@ select.search-field { cursor: pointer; }
   transition: color 0.15s;
 }
 .action-del:hover { color: var(--red); }
+.bc-row { display:grid; gap:0.3rem; align-items:center; margin-bottom:0.3rem; }
 .add-action-btn {
   background: none; border: 1px dashed var(--border2); color: var(--muted);
   width: 100%; padding: 0.35rem; font-size: 0.75rem; cursor: pointer;
@@ -511,7 +512,7 @@ function renderCardList() {
         const rest = S.restrictions[c.id];
         const rarStyle = RARITY_STYLES[c.rarity||'common'];
         return `<tr>
-          <td><span class="card-icon">${c.image||'?'}</span></td>
+          <td><span class="card-icon">${(()=>{const img=c.image||'?';return (img.startsWith('http')||img.startsWith('data:'))?`<img src="${img}" style="width:24px;height:32px;object-fit:cover;border-radius:2px" onerror="this.textContent='🖼'">`:img;})()}</span></td>
           <td class="card-name-cell">${c.name}</td>
           <td><span class="type-badge type-${c.type}">${{monster:'몬스터',spell:'마법',trap:'함정'}[c.type]}</span></td>
           <td style="font-size:0.75rem;color:var(--muted)">${c.subtype||'-'}</td>
@@ -557,7 +558,7 @@ function renderCardEditor() {
             <span>${c.name||'카드 이름'}</span>
             ${c.type==='monster'?`<span>${'★'.repeat(Math.min(c.level||0,8))}</span>`:''}
           </div>
-          <div class="preview-image">${c.image||'?'}</div>
+          <div class="preview-image">${(()=>{const img=c.image||'?';const isUrl=img.startsWith('http')||img.startsWith('data:');return isUrl?`<img src="${img}" style="max-width:100%;max-height:100%;object-fit:cover" onerror="this.style.display='none'">` : `<span style="font-size:${img.length>2?'2.2rem':'3rem'}">${img}</span>`;})()}</div>
           <div class="preview-frame-bot" style="background:${frameColor}44">
             ${c.type==='monster'?`<span>ATK ${c.atk??0}</span><span>DEF ${c.def??0}</span>`:`<span>${c.subtype||''} 마법</span><span></span>`}
           </div>
@@ -581,8 +582,27 @@ function renderCardEditor() {
             <input class="form-input" value="${c.name||''}" oninput="updateEdit('name',this.value)" placeholder="카드 이름">
           </div>
           <div class="form-group">
-            <div class="form-label">이모지/이미지</div>
-            <input class="form-input" value="${c.image||''}" oninput="updateEdit('image',this.value)" placeholder="🔥 이모지 또는 URL">
+            <div class="form-label">카드 이미지</div>
+            <div style="display:flex;gap:0.4rem;align-items:stretch">
+              <input class="form-input" id="img-input" value="${c.image||''}"
+                oninput="updateEdit('image',this.value);updateImagePreview(this.value)"
+                placeholder="이모지(🔥) 또는 이미지 URL">
+              <button class="btn btn-secondary" style="flex-shrink:0;font-size:0.72rem;padding:0 0.6rem"
+                onclick="document.getElementById('img-file').click()">파일</button>
+              <input type="file" id="img-file" accept="image/*" style="display:none"
+                onchange="loadImageFile(this)">
+            </div>
+            <div style="display:flex;gap:0.4rem;margin-top:0.4rem;flex-wrap:wrap">
+              ${['⚔️','🔥','🌊','🌑','👼','🐉','🛡️','💥','⚡','🌟','💀','🌀','📜','✨','↩️','🔮','🕳️','⚠️','🔄','🌀','🗡','🩹'].map(e=>
+                `<div onclick="updateEdit('image','${e}');document.getElementById('img-input').value='${e}';updateImagePreview('${e}')"
+                  style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;cursor:pointer;border:1px solid var(--border);border-radius:3px;background:var(--bg3);transition:all .15s"
+                  onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--border)'">${e}</div>`
+              ).join('')}
+            </div>
+            <div id="img-preview" style="margin-top:0.4rem;display:${c.image&&c.image.length>2?'block':'none'}">
+              <img id="img-preview-el" src="${c.image&&c.image.startsWith('http')?c.image:''}"
+                style="max-width:80px;max-height:80px;border-radius:3px;border:1px solid var(--border);display:${c.image&&c.image.startsWith('http')?'block':'none'}">
+            </div>
           </div>
         </div>
         <div class="form-row cols-3" style="margin-bottom:0.7rem">
@@ -697,8 +717,9 @@ function renderCardEditor() {
 }
 
 function renderEffectEditor(eff, ei) {
-  const trigLabel = TRIGGER_TYPES.find(t=>t.v===eff.trigger)?.l || eff.trigger;
+  const bcs = eff.builtinConditions || [];
   return `<div class="effect-item" id="eff_${ei}">
+    <!-- 트리거 헤더 -->
     <div class="effect-header">
       <div class="effect-number">${ei+1}</div>
       <div style="flex:1">
@@ -708,6 +729,8 @@ function renderEffectEditor(eff, ei) {
       </div>
       <button class="btn btn-sm btn-danger" onclick="removeEffect(${ei})">삭제</button>
     </div>
+
+    <!-- 기본 옵션 행 -->
     <div class="form-row cols-2" style="margin-bottom:0.5rem">
       <div class="form-group">
         <div class="form-label">효과 설명 (표시용)</div>
@@ -716,14 +739,47 @@ function renderEffectEditor(eff, ei) {
       </div>
       <div class="form-group">
         <div class="form-label">옵션</div>
-        <div style="display:flex;gap:0.5rem;align-items:center;padding-top:0.4rem">
+        <div style="display:flex;gap:0.8rem;align-items:center;padding-top:0.4rem;flex-wrap:wrap">
           <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.78rem;cursor:pointer">
             <input type="checkbox" ${eff.once?'checked':''} onchange="updateEffect(${ei},'once',this.checked)">
-            <span style="color:var(--muted)">1턴 1회 제한</span>
+            <span style="color:var(--muted)">1회 제한</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.78rem;cursor:pointer">
+            <input type="checkbox" ${eff.chainable?'checked':''} onchange="updateEffect(${ei},'chainable',this.checked)">
+            <span style="color:var(--muted)">체인 가능</span>
           </label>
         </div>
       </div>
     </div>
+
+    <!-- 발동 위치 / 타이밍 -->
+    <div class="form-row cols-2" style="margin-bottom:0.6rem">
+      <div class="form-group">
+        <div class="form-label">발동 위치</div>
+        <select class="form-select" style="font-size:0.78rem" onchange="updateEffect(${ei},'activationLocation',this.value)">
+          <option value="field" ${(eff.activationLocation||'field')==='field'?'selected':''}>필드 (앞면 표시)</option>
+          <option value="hand" ${eff.activationLocation==='hand'?'selected':''}>패 (핸드에서 발동)</option>
+          <option value="gy" ${eff.activationLocation==='gy'?'selected':''}>묘지에서 발동</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <div class="form-label">발동 타이밍</div>
+        <select class="form-select" style="font-size:0.78rem" onchange="updateEffect(${ei},'activationScope',this.value)">
+          <option value="own_turn" ${(eff.activationScope||'own_turn')==='own_turn'?'selected':''}>자신의 턴만</option>
+          <option value="either_turn" ${eff.activationScope==='either_turn'?'selected':''}>양쪽 턴 모두</option>
+          <option value="opponent_turn" ${eff.activationScope==='opponent_turn'?'selected':''}>상대 턴만</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 발동 조건 (builtinConditions) -->
+    <div class="form-section-title" style="font-size:0.68rem;margin-bottom:0.4rem">발동 조건</div>
+    <div id="bc_list_${ei}" style="display:flex;flex-direction:column;gap:0.3rem;margin-bottom:0.3rem">
+      ${bcs.map((bc,bi)=>renderBuiltinConditionRow(bc,ei,bi)).join('')}
+    </div>
+    <button class="add-action-btn" onclick="addBuiltinCondition(${ei})">+ 조건 추가</button>
+
+    <div class="divider"></div>
 
     <!-- 발동 비용 -->
     <div class="form-section-title" style="font-size:0.68rem;margin-bottom:0.3rem">발동 비용</div>
@@ -740,16 +796,50 @@ function renderEffectEditor(eff, ei) {
       ${(eff.actions||[]).map((act,ai) => renderActionRow(act, ei, ai, 'actions')).join('')}
     </div>
     <button class="add-action-btn" onclick="addAction(${ei},'actions')">+ 액션 추가</button>
-
-    <!-- 조건 (고급) -->
-    <div style="margin-top:0.5rem">
-      <div class="form-label" style="margin-bottom:0.3rem">발동 조건 (JS 표현식, 선택)</div>
-      <input class="form-input" style="font-family:var(--mono);font-size:0.75rem;color:#7ec8e3"
-        value="${eff.condition||''}" 
-        oninput="updateEffect(${ei},'condition',this.value||null)"
-        placeholder="예: ctx.state.players[ctx.controller].lp <= 2000">
-    </div>
   </div>`;
+}
+
+// ─── BUILTIN CONDITION ROW ─────────────────────────────────
+// 내장 조건 타입 정의
+const BUILTIN_COND_TYPES = [
+  {v:'opp_field_count_ge',  l:'상대 필드 카드 수 ≥ N', hasValue:true,  valuePlaceholder:'장'},
+  {v:'opp_monster_count_ge',l:'상대 몬스터 수 ≥ N',    hasValue:true,  valuePlaceholder:'체'},
+  {v:'my_lp_le',            l:'자신 LP ≤ N',            hasValue:true,  valuePlaceholder:''},
+  {v:'my_lp_ge',            l:'자신 LP ≥ N',            hasValue:true,  valuePlaceholder:''},
+  {v:'my_gy_count_ge',      l:'자신 묘지 카드 수 ≥ N',  hasValue:true,  valuePlaceholder:'장'},
+  {v:'my_hand_count_le',    l:'자신 핸드 수 ≤ N',        hasValue:true,  valuePlaceholder:'장'},
+  {v:'took_battle_damage',  l:'전투 데미지를 받은 직후', hasValue:false, valuePlaceholder:''},
+];
+
+function renderBuiltinConditionRow(bc, ei, bi) {
+  const typeDef = BUILTIN_COND_TYPES.find(t=>t.v===bc.type) || BUILTIN_COND_TYPES[0];
+  return `<div style="display:grid;grid-template-columns:1fr ${typeDef.hasValue?'80px':''} 1fr 28px;gap:0.3rem;align-items:center">
+    <select class="form-select" style="font-size:0.75rem" onchange="updateBuiltinCondition(${ei},${bi},'type',this.value)">
+      ${BUILTIN_COND_TYPES.map(t=>`<option value="${t.v}" ${bc.type===t.v?'selected':''}>${t.l}</option>`).join('')}
+    </select>
+    ${typeDef.hasValue
+      ? `<input class="form-input" type="number" min="0" style="font-size:0.75rem" value="${bc.value||0}"
+           oninput="updateBuiltinCondition(${ei},${bi},'value',+this.value)" placeholder="${typeDef.valuePlaceholder}">`
+      : ''}
+    <input class="form-input" style="font-size:0.72rem" value="${bc.failReason||''}"
+      oninput="updateBuiltinCondition(${ei},${bi},'failReason',this.value)"
+      placeholder="실패 메시지 (예: LP 2000 이하 필요)">
+    <button class="action-del" onclick="removeBuiltinCondition(${ei},${bi})">✕</button>
+  </div>`;
+}
+
+function addBuiltinCondition(ei) {
+  if(!S.editingCard.effects[ei].builtinConditions) S.editingCard.effects[ei].builtinConditions = [];
+  S.editingCard.effects[ei].builtinConditions.push({type:'my_lp_le', value:2000, failReason:''});
+  render();
+}
+function removeBuiltinCondition(ei, bi) {
+  S.editingCard.effects[ei].builtinConditions.splice(bi, 1);
+  render();
+}
+function updateBuiltinCondition(ei, bi, field, value) {
+  if(!S.editingCard.effects[ei].builtinConditions) return;
+  S.editingCard.effects[ei].builtinConditions[bi][field] = value;
 }
 
 function renderActionRow(act, ei, ai, part) {
@@ -874,6 +964,44 @@ function editCard(id) {
 
 function cancelEdit() { S.editingCard = null; render(); }
 
+function updateImagePreview(val) {
+  const input = document.getElementById('img-input');
+  const previewDiv = document.getElementById('img-preview');
+  const previewImg = document.getElementById('img-preview-el');
+  if (!previewDiv || !previewImg) return;
+  if (val && val.startsWith('http')) {
+    previewImg.src = val;
+    previewImg.style.display = 'block';
+    previewDiv.style.display = 'block';
+  } else {
+    previewImg.style.display = 'none';
+    previewDiv.style.display = 'none';
+  }
+}
+
+function loadImageFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  // 파일 크기 제한 (200KB)
+  if (file.size > 200 * 1024) {
+    showToast('이미지 파일은 200KB 이하여야 합니다.', 'error');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUrl = e.target.result;
+    updateEdit('image', dataUrl);
+    const imgInput = document.getElementById('img-input');
+    if (imgInput) imgInput.value = dataUrl.slice(0, 60) + '...';
+    // 미리보기 업데이트
+    const previewImg = document.getElementById('img-preview-el');
+    const previewDiv = document.getElementById('img-preview');
+    if (previewImg) { previewImg.src = dataUrl; previewImg.style.display = 'block'; }
+    if (previewDiv) previewDiv.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
 function updateEdit(field, value) {
   S.editingCard[field] = value;
   // Re-render preview parts
@@ -887,7 +1015,7 @@ function updateEdit(field, value) {
           <span>${c.name||'카드 이름'}</span>
           ${c.type==='monster'?`<span>${'★'.repeat(Math.min(c.level||0,8))}</span>`:''}
         </div>
-        <div class="preview-image">${c.image||'?'}</div>
+        <div class="preview-image">${(()=>{const img=c.image||'?';const isUrl=img.startsWith('http')||img.startsWith('data:');return isUrl?`<img src="${img}" style="max-width:100%;max-height:100%;object-fit:cover;border-radius:2px">` : `<span style="font-size:${img.length>2?'2.2rem':'3rem'}">${img}</span>`;})()}</div>
         <div class="preview-frame-bot" style="background:${fc}44">
           ${c.type==='monster'?`<span>ATK ${c.atk??0}</span><span>DEF ${c.def??0}</span>`:`<span>${c.subtype||''}</span><span></span>`}
         </div>
