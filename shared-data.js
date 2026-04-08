@@ -344,7 +344,112 @@ const EffectEngine = {
   },
 };
 
-// ─── FIELD CARD FACTORY ──────────────────────────────────────
+// ─── BUILTIN CONDITIONS ──────────────────────────────────────
+// 게임 상태 기반 내장 조건 평가 함수 모음
+const BUILTIN_CONDITIONS = {
+  opp_field_count_ge: (value, ctx) => {
+    const opp = ctx.state.players[1 - ctx.controller];
+    return [...opp.monsterZones, ...opp.spellZones].filter(z => z).length >= value;
+  },
+  my_lp_le: (value, ctx) => {
+    return ctx.state.players[ctx.controller].lp <= value;
+  },
+  took_battle_damage: (value, ctx) => {
+    return !!ctx.state._lastTookBattleDamage;
+  },
+  opp_monster_count_ge: (value, ctx) => {
+    return ctx.state.players[1 - ctx.controller].monsterZones.filter(z => z).length >= value;
+  },
+  my_gy_count_ge: (value, ctx) => {
+    // value가 숫자면 묘지 전체 카드 수, 객체면 {count, filter:'monster'} 등
+    const gy = ctx.state.players[ctx.controller].graveyard;
+    if (typeof value === 'object' && value.filter === 'monster') {
+      return gy.filter(id => { const c = ctx.cardDB[id]; return c && c.type === 'monster'; }).length >= (value.count || 1);
+    }
+    return gy.length >= value;
+  },
+  my_hand_count_le: (value, ctx) => {
+    return ctx.state.players[ctx.controller].hand.length <= value;
+  },
+  // 융합 소환 가능 조건 — canFusionSummon(cardId) 를 게임에서 주입
+  can_fusion_summon: (value, ctx) => {
+    // value = cardId to check, or undefined = any fusion
+    const p = ctx.state.players[ctx.controller];
+    if (!p.extraDeck || !p.extraDeck.length) return false;
+    const targets = value ? [value] : p.extraDeck;
+    return targets.some(id => {
+      const c = ctx.cardDB[id];
+      if (!c || c.subtype !== 'fusion') return false;
+      return checkFusionMaterialsAvailable(c, ctx.state, ctx.controller, ctx.cardDB);
+    });
+  },
+};
+
+// ─── FUSION MATERIAL CHECK ────────────────────────────────────
+// fusionMaterials 스키마:
+// [
+//   'cardId',                     // 특정 카드 ID (정확한 소재)
+//   { any: true },                // 아무 몬스터 1체
+//   { type: 'monster' },          // 몬스터 타입
+//   { race: '전사족' },            // 종족
+//   { attribute: 'DARK' },        // 속성
+//   { level: 4 },                 // 레벨
+//   { ids: ['m001','m002'] },     // ID 목록 중 하나
+// ]
+function checkFusionMaterialSlot(slot, card) {
+  if (typeof slot === 'string') return card.id === slot;
+  if (slot.any) return card.type === 'monster';
+  if (slot.type && card.type !== slot.type) return false;
+  if (slot.race && card.race !== slot.race) return false;
+  if (slot.attribute && card.attribute !== slot.attribute) return false;
+  if (slot.level && card.level !== slot.level) return false;
+  if (slot.ids && !slot.ids.includes(card.id)) return false;
+  return true;
+}
+
+function checkFusionMaterialsAvailable(fusionCard, state, pi, cardDB) {
+  const mats = fusionCard.fusionMaterials || [];
+  if (!mats.length) return false;
+  const p = state.players[pi];
+  // 패 + 필드 앞면 몬스터 목록
+  const pool = [
+    ...p.hand.map(id => cardDB[id]).filter(Boolean),
+    ...p.monsterZones.filter(z => z && z.faceUp).map(z => cardDB[z.cardId]).filter(Boolean),
+  ];
+  // 각 소재 슬롯을 만족하는 카드가 pool에 있는지 확인 (그리디 매칭)
+  const used = new Set();
+  for (const slot of mats) {
+    const found = pool.findIndex((c, i) => !used.has(i) && checkFusionMaterialSlot(slot, c));
+    if (found === -1) return false;
+    used.add(found);
+  }
+  return true;
+}
+
+// 융합 소환 실행: 소재 제거 후 콜백
+function doFusionSummon(fusionCard, pi, state, cardDB, sendToGYFn, callback) {
+  const mats = fusionCard.fusionMaterials || [];
+  const p = state.players[pi];
+  const usedHand = [], usedField = [];
+  const pool = [
+    ...p.hand.map((id, i) => ({ id, card: cardDB[id], from: 'hand', idx: i })).filter(x => x.card),
+    ...p.monsterZones.map((z, i) => z && z.faceUp ? { id: z.cardId, card: cardDB[z.cardId], from: 'field', idx: i } : null).filter(Boolean),
+  ];
+  const usedPoolIdx = new Set();
+  for (const slot of mats) {
+    const found = pool.findIndex((x, i) => !usedPoolIdx.has(i) && checkFusionMaterialSlot(slot, x.card));
+    if (found === -1) continue;
+    usedPoolIdx.add(found);
+    const x = pool[found];
+    if (x.from === 'hand') usedHand.push(x.idx);
+    else usedField.push(x.idx);
+  }
+  // 핸드에서 소재 제거 (인덱스 역순)
+  usedHand.sort((a, b) => b - a).forEach(i => { p.graveyard.push(p.hand.splice(i, 1)[0]); });
+  // 필드에서 소재 제거
+  usedField.forEach(i => sendToGYFn(pi, 'monster', i));
+  callback && callback();
+}
 function createFieldCard(cardId, pos='ATK', faceUp=true) {
   return {
     uid: Date.now() + Math.random(),
@@ -609,10 +714,44 @@ const DEFAULT_CARDS = [
     id: 'f001', name: '혼돈의 쌍룡', type: 'monster', subtype: 'fusion',
     attribute: 'DARK', race: '드래곤족', level: 8,
     atk: 3200, def: 2800,
-    desc: '「폭풍의 용」+「어둠의 마법사」 이 카드는 덱에서 융합 소환할 수 없다.',
-    effects: [],
+    desc: '「폭풍의 용」+「어둠의 마법사」. 소환 성공 시 상대 몬스터 1체를 파괴한다.',
+    effects: [
+      {
+        id: 'e_f001_1',
+        trigger: 'on_summon',
+        actions: [{ type: 'destroy', target: 'opponent_monster', value: 1 }],
+        cost: [], once: true,
+        description: '소환 시 상대 몬스터 1체 파괴',
+      }
+    ],
     image: '🐲', rarity: 'ultra',
-    fusionMaterials: ['m004', 'm006'],
+    fusionMaterials: ['m006', 'm004'],
+  },
+  {
+    id: 'f002', name: '광전사 카오스', type: 'monster', subtype: 'fusion',
+    attribute: 'LIGHT', race: '전사족', level: 6,
+    atk: 2400, def: 1800,
+    desc: '전사족 몬스터 × 2. 이 카드는 전사족 몬스터 2체로 융합 소환할 수 있다.',
+    effects: [],
+    image: '⚡', rarity: 'super',
+    fusionMaterials: [{ race: '전사족' }, { race: '전사족' }],
+  },
+  {
+    id: 'f003', name: '혼돈의 지배자', type: 'monster', subtype: 'fusion',
+    attribute: 'DARK', race: '마법사족', level: 7,
+    atk: 2800, def: 2200,
+    desc: '아무 몬스터 2체. 어떠한 몬스터 2체로도 융합 소환할 수 있다. 소환 시 카드를 1장 드로우한다.',
+    effects: [
+      {
+        id: 'e_f003_1',
+        trigger: 'on_summon',
+        actions: [{ type: 'draw', value: 1 }],
+        cost: [], once: true,
+        description: '소환 시 1장 드로우',
+      }
+    ],
+    image: '🌀', rarity: 'secret',
+    fusionMaterials: [{ any: true }, { any: true }],
   },
 
   // ── SPELLS ────────────────────────────────────────────────
@@ -734,6 +873,20 @@ const DEFAULT_CARDS = [
       }
     ],
     image: '✨', rarity: 'ultra',
+  },
+  {
+    id: 's009', name: '폴리머리제이션', type: 'spell', subtype: 'normal',
+    desc: '패/필드에서 융합 소환에 필요한 소재를 묘지로 보내고, 엑스트라 덱에서 융합 몬스터 1체를 특수 소환한다.',
+    effects: [
+      {
+        id: 'e_s009_1',
+        trigger: 'on_activate',
+        actions: [{ type: 'fusion_summon', ss_count: 1 }],
+        cost: [], once: true,
+        description: '융합 소환 실행',
+      }
+    ],
+    image: '🌊', rarity: 'rare',
   },
   // ── 새 스키마 예시 카드들 ─────────────────────────────────
   {
