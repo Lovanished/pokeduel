@@ -1,5 +1,5 @@
 // ============================================================
-// SHARED DATA LAYER — Card DB + Effect Engine + Storage
+// SHARED DATA LAYER — Card DB + Effect Engine + Storage?
 // ============================================================
 
 // ─── STORAGE (localStorage wrapper) ─────────────────────────
