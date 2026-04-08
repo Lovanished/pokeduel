@@ -95,32 +95,32 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .saved-deck-row{display:flex;align-items:center;gap:.4rem;padding:.3rem .4rem;border:1px solid var(--border);border-radius:2px;cursor:pointer;font-size:.75rem;transition:all .15s}.saved-deck-row:hover{border-color:var(--gold);color:var(--gold)}
 
 /* ══ DUEL ══ */
-.duel{display:grid;grid-template-rows:auto 1fr auto;min-height:100vh;max-width:1280px;margin:0 auto;padding:.4rem;gap:.4rem}
-.top-bar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:.5rem;padding:.4rem .8rem;background:var(--bg2);border:1px solid var(--border);border-radius:3px}
+.duel{display:grid;grid-template-rows:auto minmax(0,1fr) auto;height:100vh;max-width:1280px;margin:0 auto;padding:.4rem;gap:.3rem;overflow:hidden}
+.top-bar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:.5rem;padding:.3rem .8rem;background:var(--bg2);border:1px solid var(--border);border-radius:3px;flex-shrink:0}
 .lp-block{display:flex;align-items:center;gap:.6rem}
 .lp-block.enemy{flex-direction:row-reverse}
-.lp-name{font-family:var(--cinzel);font-size:.78rem;letter-spacing:.06em;min-width:60px}
-.lp-bar-wrap{width:160px;height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.lp-name{font-family:var(--cinzel);font-size:.72rem;letter-spacing:.06em;min-width:55px}
+.lp-bar-wrap{width:130px;height:5px;background:var(--border);border-radius:3px;overflow:hidden}
 .lp-bar-fill{height:100%;border-radius:3px;transition:width .6s ease}
 .lp-bar-fill.p{background:linear-gradient(90deg,var(--lp-p),#88aaff)}
 .lp-bar-fill.e{background:linear-gradient(90deg,#ff88aa,var(--lp-e))}
-.lp-num{font-family:var(--cinzel);font-size:.95rem;font-weight:700;min-width:44px}
+.lp-num{font-family:var(--cinzel);font-size:.88rem;font-weight:700;min-width:40px}
 .lp-num.p{color:#88aaff}.lp-num.e{color:#ff88aa}
 .phase-center{text-align:center}
-.phase-label{font-family:var(--cinzel);font-size:.82rem;color:var(--gold);letter-spacing:.12em}
-.turn-label{font-size:.68rem;color:var(--muted);margin-top:.1rem}
+.phase-label{font-family:var(--cinzel);font-size:.76rem;color:var(--gold);letter-spacing:.1em}
+.turn-label{font-size:.62rem;color:var(--muted);margin-top:.1rem}
 
-/* Field — 스케일은 .field-scaler transform으로만 처리, font-size 변경 없음 */
-.field-scaler-wrap{width:100%;overflow:hidden;display:flex;justify-content:center}
+/* Field — .field-scaler transform으로만 처리 */
+.field-scaler-wrap{width:100%;height:100%;overflow:hidden;display:flex;justify-content:center;align-items:flex-start}
 .field-scaler{transform-origin:top center;transition:transform .2s;width:100%}
-.field{display:grid;grid-template-rows:1fr 6px 1fr;gap:.3rem}
-.field-side{display:grid;grid-template-rows:auto auto;gap:.3rem}
-/* extra-deck zone 포함: 44px side + extra-zone col + 5×monster + extra-zone col + 44px side */
-.field-main-area{display:grid;grid-template-columns:44px 36px 1fr 36px 44px;gap:.25rem}
-.zone-col{display:flex;flex-direction:column;gap:.25rem;justify-content:center}
-.extra-col{display:flex;flex-direction:column;gap:.25rem;justify-content:center}
-.monster-row,.spell-row{display:grid;grid-template-columns:repeat(5,1fr);gap:.25rem}
-.field-divider{background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.25;border-radius:2px}
+.field{display:grid;grid-template-rows:1fr 5px 1fr;gap:.25rem;height:100%}
+.field-side{display:grid;grid-template-rows:auto auto;gap:.25rem}
+/* extra-deck zone 포함 */
+.field-main-area{display:grid;grid-template-columns:40px 34px 1fr 34px 40px;gap:.2rem}
+.zone-col{display:flex;flex-direction:column;gap:.2rem;justify-content:center}
+.extra-col{display:flex;flex-direction:column;gap:.2rem;justify-content:center}
+.monster-row,.spell-row{display:grid;grid-template-columns:repeat(5,1fr);gap:.2rem}
+.field-divider{background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.25;border-radius:2px;flex-shrink:0}
 
 /* Zones */
 .zone{aspect-ratio:59/86;border:1px solid var(--border2);border-radius:2px;background:rgba(255,255,255,.015);display:flex;align-items:center;justify-content:center;cursor:default;transition:all .2s;position:relative;overflow:hidden;font-size:.48rem;color:var(--muted);letter-spacing:.02em;font-family:var(--cinzel)}
@@ -138,7 +138,9 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 
 /* Field cards */
 .fcard{width:100%;height:100%;position:relative;border-radius:1px;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-direction:column}
-.fcard-emoji{font-size:1.5rem;position:relative;z-index:1}
+.fcard-emoji{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;width:100%;flex:1;overflow:hidden}
+.fcard-emoji img{width:100%;height:100%;object-fit:cover;display:block}
+.fcard-emoji span{font-size:clamp(1rem,3vw,1.8rem);line-height:1}
 .fcard-frame-overlay{position:absolute;inset:0;opacity:.35}
 .fcard-atk{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.72);font-family:var(--cinzel);font-size:.5rem;display:flex;justify-content:space-around;padding:1px 0;pointer-events:none}
 .atk-v{color:#f09090}.def-v{color:#90b0f0}
@@ -815,13 +817,63 @@ function executeActionWithUI(action,ctx,pi,callback){
       executeSpecialSummonAction(action,ctx,pi,callback);
       break;
     }
+    case 'fusion_summon':{
+      // 엑스트라 덱에서 소환 가능한 융합 몬스터 목록 추출
+      const fusionTargets=p.extraDeck
+        .map(id=>({id,card:CARDDB[id]}))
+        .filter(({card})=>card&&card.subtype==='fusion'&&checkFusionMaterialsAvailable(card,ctx.state,pi,CARDDB));
+      if(!fusionTargets.length){addLog('융합 소환 가능한 카드가 없습니다.','danger');return callback&&callback();}
+      if(pi===0){
+        // 플레이어: 소환할 융합 몬스터 선택 모달
+        App.modal={
+          type:'fusionSummonSelect',
+          targets:fusionTargets,
+          pi,
+          callback:(selectedId)=>{
+            const card=CARDDB[selectedId];if(!card)return;
+            doFusionSummon(card,pi,ctx.state,CARDDB,sendToGY,()=>{
+              const slot=p.monsterZones.findIndex(z=>z===null);
+              if(slot===-1){addLog('몬스터존이 가득 찼습니다!','danger');return;}
+              const ei=p.extraDeck.indexOf(selectedId);
+              if(ei>-1)p.extraDeck.splice(ei,1);
+              const fc=createFieldCard(selectedId,'ATK',true);
+              fc.summonedThisTurn=true;fc.canAttack=false;
+              p.monsterZones[slot]=fc;
+              addLog(`융합 소환: ${card.name}!`,'special');
+              fireTriggers('on_summon',fc,pi);
+              fireTriggers('on_special_summon',fc,pi);
+              checkLPWin();
+              callback&&callback();
+              render();
+            });
+          }
+        };
+        render();
+      }else{
+        // AI: 가장 ATK 높은 융합 몬스터 소환
+        const best=fusionTargets.sort((a,b)=>(b.card.atk||0)-(a.card.atk||0))[0];
+        doFusionSummon(best.card,pi,ctx.state,CARDDB,sendToGY,()=>{
+          const slot=p.monsterZones.findIndex(z=>z===null);
+          if(slot===-1)return;
+          const ei=p.extraDeck.indexOf(best.id);
+          if(ei>-1)p.extraDeck.splice(ei,1);
+          const fc=createFieldCard(best.id,'ATK',true);
+          fc.summonedThisTurn=true;fc.canAttack=false;
+          p.monsterZones[slot]=fc;
+          addLog(`AI 융합 소환: ${best.card.name}!`,'enemy');
+          fireTriggers('on_summon',fc,pi);
+          fireTriggers('on_special_summon',fc,pi);
+          checkLPWin();
+          return callback&&callback();
+        });
+      }
+      break;
+    }
     default:
       addLog(`[효과: ${action.type}]`);
       return callback&&callback();
   }
 }
-
-// ── Target select modal ──
 function openTargetSelectModal(title,zones,count,multiSelect,callback){
   App.modal={
     type:'targetSelect',title,zones,count,selected:[],callback,
@@ -1029,39 +1081,31 @@ function sendToGY(pi,zone,idx){
 }
 
 // ══════════════════════════════════════════
-// EXTRA DECK SUMMON SYSTEM (Bug 2)
+// EXTRA DECK SUMMON SYSTEM
 // ══════════════════════════════════════════
-// 엑스트라 소환 타입별 소재 요건
 const EXTRA_SUMMON_REQS={
   fusion:{
     label:'융합 소환',color:'#6a3a8a',
-    // 패/필드의 카드를 소재로 사용 (소재 id 배열 매칭)
     canSummon(card,pi){
-      const p=P(pi);
-      const mats=card.fusionMaterials||[];
-      if(!mats.length)return{ok:false,reason:'소재 정보 없음'};
-      // 패+필드에서 소재 전부 있는지 확인
-      const avail=[...p.hand,...p.monsterZones.filter(z=>z).map(z=>z.cardId)];
-      const missing=mats.filter(id=>!avail.includes(id));
-      if(missing.length){
-        const names=missing.map(id=>CARDDB[id]?.name||id).join(', ');
-        return{ok:false,reason:`소재 부족: ${names}`};
+      const dv=d();
+      if(!checkFusionMaterialsAvailable(card,dv,pi,CARDDB)){
+        const mats=(card.fusionMaterials||[]).map(m=>{
+          if(typeof m==='string') return CARDDB[m]?.name||m;
+          if(m.any) return '아무 몬스터';
+          if(m.race) return m.race+' 몬스터';
+          if(m.attribute) return m.attribute+' 속성';
+          if(m.ids) return m.ids.map(id=>CARDDB[id]?.name||id).join('또는');
+          return '소재';
+        }).join(' + ');
+        return{ok:false,reason:`소재 부족 — ${mats}`};
       }
       return{ok:true};
     },
     doSummon(card,pi,callback){
-      const p=P(pi);
-      const mats=card.fusionMaterials||[];
-      // 패에서 소재 제거
-      mats.forEach(matId=>{
-        const hi=p.hand.indexOf(matId);
-        if(hi>-1){p.graveyard.push(p.hand.splice(hi,1)[0]);return;}
-        // 필드에서
-        const mi=p.monsterZones.findIndex(z=>z&&z.cardId===matId);
-        if(mi>-1){sendToGY(pi,'monster',mi);}
+      doFusionSummon(card,pi,d(),CARDDB,sendToGY,()=>{
+        addLog(`융합 소환: ${card.name}!`,'special');
+        callback&&callback();
       });
-      addLog(`융합 소환: ${card.name}!`,'special');
-      callback&&callback();
     }
   },
   synchro:{
@@ -1325,27 +1369,26 @@ function checkEffectActivationCondition(eff,fc,pi){
   const phase=dv.phase;
   const inMain=phase==='MAIN1'||phase==='MAIN2';
 
-  // 1. activationLocation 체크
-  const loc=eff.activationLocation||'field';
-  if(loc==='field'){
-    // 카드가 필드 앞면 표시로 존재해야 함
-    const onField=dv.players[pi].monsterZones.some(z=>z&&z===fc&&z.faceUp)
-      ||dv.players[pi].spellZones.some(z=>z&&z===fc&&z.faceUp);
-    if(!onField&&fc)return{ok:false,reason:'필드에 앞면 표시 상태가 아닙니다'};
-  }else if(loc==='hand'){
-    if(!dv.players[pi].hand.includes(fc?.cardId))return{ok:false,reason:'패에 카드가 없습니다'};
-  }else if(loc==='gy'){
-    if(!dv.players[pi].graveyard.includes(fc?.cardId))return{ok:false,reason:'묘지에 카드가 없습니다'};
+  // 1. activationLocation 체크 — 명시된 경우에만 검사
+  const loc=eff.activationLocation;
+  if(loc==='field'&&fc){
+    // uid로 필드 존재 확인 (참조 비교 대신)
+    const onField=dv.players[pi].monsterZones.some(z=>z&&z.uid===fc.uid&&z.faceUp)
+      ||dv.players[pi].spellZones.some(z=>z&&z.uid===fc.uid&&z.faceUp);
+    if(!onField)return{ok:false,reason:'필드에 앞면 표시 상태가 아닙니다'};
+  }else if(loc==='hand'&&fc){
+    if(!dv.players[pi].hand.includes(fc.cardId))return{ok:false,reason:'패에 카드가 없습니다'};
+  }else if(loc==='gy'&&fc){
+    if(!dv.players[pi].graveyard.includes(fc.cardId))return{ok:false,reason:'묘지에 카드가 없습니다'};
   }
 
   // 2. activationScope 체크
   const scope=eff.activationScope||'own_turn';
   if(scope==='own_turn'&&!isMyTurn)return{ok:false,reason:'자신의 턴에만 발동 가능'};
   if(scope==='opponent_turn'&&isMyTurn)return{ok:false,reason:'상대 턴에만 발동 가능'};
-  // 'either_turn'은 제한 없음
 
-  // 메인 페이즈 한정 발동(chainable=false면 메인에만 발동 가능)
-  if(!eff.chainable&&loc==='field'&&!inMain&&isMyTurn)return{ok:false,reason:'메인 페이즈에만 발동 가능'};
+  // 메인 페이즈 한정
+  if(loc==='field'&&!eff.chainable&&!inMain&&isMyTurn)return{ok:false,reason:'메인 페이즈에만 발동 가능'};
 
   // 3. 내장 조건 체크
   if(eff.builtinConditions){
@@ -1357,7 +1400,7 @@ function checkEffectActivationCondition(eff,fc,pi){
     }
   }
 
-  // 4. 기존 JS 표현식 condition 체크 (하위 호환)
+  // 4. 기존 JS 표현식 condition 체크
   if(eff.condition&&fc){
     try{
       const ok=new Function('ctx','state',`return(${eff.condition})`)(ctx,dv);
@@ -1551,17 +1594,16 @@ function renderTitle(){
 
 function applyUIScale(scale){
   localStorage.setItem('ui_scale',scale);
-  const cardMin=Math.round(58*scale)+'px';
-  const handW=Math.round(44*scale)+'px';
   document.documentElement.style.setProperty('--ui-scale',scale);
-  document.documentElement.style.setProperty('--card-min',cardMin);
-  document.documentElement.style.setProperty('--hand-card-w',handW);
-  // 필드 영역만 transform scale로 스케일링 (폰트 크기는 변경하지 않음)
-  const scaler=document.querySelector('.field-scaler');
+  document.documentElement.style.setProperty('--card-min',Math.round(58*scale)+'px');
+  document.documentElement.style.setProperty('--hand-card-w',Math.round(44*scale)+'px');
+  const scaler=document.getElementById('field-scaler');
   if(scaler){
     scaler.style.transform=`scale(${scale})`;
-    // 스케일 줄면 높이 보정
-    scaler.style.marginBottom=(scale<1?`${Math.round((scale-1)*scaler.offsetHeight)}px`:'0');
+    scaler.style.transformOrigin='top center';
+    // scale < 1이면 아래 여백이 생기므로 음수 마진으로 당김
+    const h=scaler.offsetHeight||400;
+    scaler.style.marginBottom=scale<1?`${Math.round((scale-1)*h)}px`:'0';
   }
 }
 
@@ -1838,7 +1880,7 @@ function renderZone(fieldCard,zoneClass,pi,zoneType,zoneIdx,isMyTurn,isEnemy){
     style="padding:0">
     <div class="fcard ${isDef?'def-pos':''} ${!fieldCard.faceUp?'facedown':''} ${isSelectedAtk?'fcard-sel':''}">
       <div class="fcard-frame-overlay" style="background:${fc}"></div>
-      ${fieldCard.faceUp?`<span class="fcard-emoji">${renderCardImage(card?.image||'',32)}</span>`:'<span style="font-size:1.1rem">🃏</span>'}
+      ${fieldCard.faceUp?`<div class="fcard-emoji">${renderCardImageFull(card?.image||'')}</div>`:'<span style="font-size:1.1rem">🃏</span>'}
       ${fieldCard.faceUp&&fieldCard.attacked?`<div class="atk-mark">⚔</div>`:''}
       ${!fieldCard.faceUp&&fieldCard.setThisTurn?`<div class="set-mark">SET</div>`:''}
       ${fieldCard.faceUp&&card?.type==='monster'&&atkVal!=null?`<div class="fcard-atk"><span class="atk-v">${atkVal}</span><span class="def-v">${defVal??'?'}</span></div>`:''}
@@ -2105,8 +2147,37 @@ function renderModal(){
     </div>`;
   }
 
-  // 엑스트라 소환 모달 (Bug 2)
-  if(App.ui.extraSummonModal){
+  // 융합 소환 카드 선택 모달
+  if(m.type==='fusionSummonSelect'){
+    const targets=m.targets;
+    return`<div class="modal-bg">
+      <div class="modal-box">
+        <div class="modal-title">융합 소환할 몬스터를 선택하세요</div>
+        <div class="modal-subtitle">소환 조건을 만족하는 카드만 표시됩니다</div>
+        <div class="card-select-grid">${targets.map(({id,card})=>{
+          const fc=getFrameColor(card);
+          const mats=(card.fusionMaterials||[]).map(m=>{
+            if(typeof m==='string')return CARDDB[m]?.name||m;
+            if(m.any)return '아무 몬스터';
+            if(m.race)return m.race;
+            if(m.attribute)return m.attribute;
+            if(m.ids)return m.ids.map(id=>CARDDB[id]?.name||id).join('/');
+            return '?';
+          }).join(' + ');
+          return`<div class="pool-card" style="cursor:pointer;border:1.5px solid ${fc}80"
+            onclick="confirmFusionSummon('${id}')"
+            onmouseenter="showTooltip(event,'${id}')" onmouseleave="hideTooltip()">
+            <div class="pool-card-frame" style="background:${fc}"></div>
+            <div class="pool-card-img"><span style="font-size:1.5rem">${card.image||'?'}</span></div>
+            <div class="pool-card-footer" style="background:${fc}cc;color:rgba(0,0,0,.85)">${card.name}</div>
+            <div style="position:absolute;bottom:20px;left:0;right:0;text-align:center;font-size:.42rem;color:#cc88ff;background:rgba(0,0,0,.75);padding:1px 2px;font-family:var(--cinzel)">${mats}</div>
+            ${card.atk!=null?`<div class="pool-card-atk">${card.atk}</div>`:''}
+          </div>`;
+        }).join('')}</div>
+        <div class="modal-actions"><button class="btn btn-outline" onclick="App.modal=null;render()">취소</button></div>
+      </div>
+    </div>`;
+  }
     const esm=App.ui.extraSummonModal;
     const p=player();
     const tab=esm.tab||'fusion';
@@ -2256,6 +2327,13 @@ function activateHandMonsterEffect(handIdx){
     App.modal={type:'effectSelect',effects:effs,fc:{cardId,_usedEffects:[]},pi:0,callback:null};
     render();
   }
+}
+
+function confirmFusionSummon(cardId){
+  const m=App.modal;if(!m||m.type!=='fusionSummonSelect')return;
+  const cb=m.callback;
+  App.modal=null;
+  cb(cardId);
 }
 
 function selectEffect(idx){
@@ -2454,6 +2532,16 @@ function renderCardImage(imageVal, sizePx, extraStyle='') {
   }
   const fs = Math.round(sizePx * (imageVal.length > 2 ? 0.52 : 0.68));
   return `<span style="font-size:${fs}px;line-height:1;display:block;text-align:center;${extraStyle}">${imageVal}</span>`;
+}
+
+// 필드 존을 꽉 채우는 렌더링 (fcard-emoji 내부용)
+function renderCardImageFull(imageVal) {
+  if (!imageVal) return `<span style="font-size:1.4rem;color:#666">?</span>`;
+  const isUrl = imageVal.startsWith('http') || imageVal.startsWith('data:');
+  if (isUrl) {
+    return `<img src="${imageVal}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;position:absolute;inset:0" onerror="this.style.display='none'">`;
+  }
+  return `<span style="font-size:clamp(1rem,2.5vw,1.8rem);line-height:1">${imageVal}</span>`;
 }
 
 init();
