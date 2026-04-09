@@ -16,9 +16,11 @@
   --cinzel:'Cinzel',serif;--sans:'Noto Sans KR',sans-serif;
   --lp-p:#3366ff;--lp-e:#ff3366;
   /* UI 스케일 - 슬라이더로 제어 */
-  --ui-scale:0.82;
-  --card-min:58px;
-  --hand-card-w:44px;
+  --ui-scale:0.50;
+  --card-min:29px;
+  --hand-card-w:22px;
+  /* 존 크기 = 패 카드 × 3 (스케일에 따라 JS로 갱신) */
+  --zone-w:66px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
@@ -95,7 +97,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .saved-deck-row{display:flex;align-items:center;gap:.4rem;padding:.3rem .4rem;border:1px solid var(--border);border-radius:2px;cursor:pointer;font-size:.75rem;transition:all .15s}.saved-deck-row:hover{border-color:var(--gold);color:var(--gold)}
 
 /* ══ DUEL ══ */
-.duel{display:grid;grid-template-rows:auto minmax(0,1fr) auto;height:100vh;max-width:1280px;margin:0 auto;padding:.4rem;gap:.3rem;overflow:hidden}
+.duel{display:grid;grid-template-rows:auto auto minmax(0,1fr) auto auto;height:100vh;max-width:1280px;margin:0 auto;padding:.4rem;gap:.3rem;overflow:hidden}
 .top-bar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:.5rem;padding:.3rem .8rem;background:var(--bg2);border:1px solid var(--border);border-radius:3px;flex-shrink:0}
 .lp-block{display:flex;align-items:center;gap:.6rem}
 .lp-block.enemy{flex-direction:row-reverse}
@@ -110,20 +112,40 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .phase-label{font-family:var(--cinzel);font-size:.76rem;color:var(--gold);letter-spacing:.1em}
 .turn-label{font-size:.62rem;color:var(--muted);margin-top:.1rem}
 
-/* Field — .field-scaler transform으로만 처리 */
-.field-scaler-wrap{width:100%;height:100%;overflow:hidden;display:flex;justify-content:center;align-items:flex-start}
-.field-scaler{transform-origin:top center;transition:transform .2s;width:100%}
-.field{display:grid;grid-template-rows:1fr 5px 1fr;gap:.25rem;height:100%}
-.field-side{display:grid;grid-template-rows:auto auto;gap:.25rem}
+/* Field — 스크롤 가능한 고정 크기 레이아웃 */
+.field-scaler-wrap{
+  width:100%;height:100%;
+  overflow-y:auto;overflow-x:hidden;
+  display:block;
+  /* 얇은 스크롤바 */
+}
+.field-scaler-wrap::-webkit-scrollbar{width:5px}
+.field-scaler-wrap::-webkit-scrollbar-track{background:var(--bg)}
+.field-scaler-wrap::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+.field-scaler{width:100%;} /* transform 없음 — 실제 크기 사용 */
+.field{display:flex;flex-direction:column;gap:.3rem;padding:.2rem 0}
+.field-side{display:flex;flex-direction:column;gap:.25rem}
 /* extra-deck zone 포함 */
-.field-main-area{display:grid;grid-template-columns:40px 34px 1fr 34px 40px;gap:.2rem}
+.field-main-area{display:grid;grid-template-columns:var(--zone-w) var(--zone-w) 1fr var(--zone-w) var(--zone-w);gap:.2rem;align-items:center}
 .zone-col{display:flex;flex-direction:column;gap:.2rem;justify-content:center}
 .extra-col{display:flex;flex-direction:column;gap:.2rem;justify-content:center}
-.monster-row,.spell-row{display:grid;grid-template-columns:repeat(5,1fr);gap:.2rem}
-.field-divider{background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.25;border-radius:2px;flex-shrink:0}
+.monster-row,.spell-row{display:flex;gap:.2rem;flex-wrap:nowrap}
+.monster-row .zone,.spell-row .zone{
+  width:var(--zone-w);
+  height:calc(var(--zone-w) * 86 / 59);
+  aspect-ratio:unset;
+  flex-shrink:0;
+}
+.field-divider{background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.25;border-radius:2px;height:4px;flex-shrink:0}
 
 /* Zones */
 .zone{aspect-ratio:59/86;border:1px solid var(--border2);border-radius:2px;background:rgba(255,255,255,.015);display:flex;align-items:center;justify-content:center;cursor:default;transition:all .2s;position:relative;overflow:hidden;font-size:.48rem;color:var(--muted);letter-spacing:.02em;font-family:var(--cinzel)}
+/* 사이드 컬럼(GY/제외/필드/엑스트라)도 zone-w 고정 */
+.zone-col .zone,.extra-col .zone{
+  width:var(--zone-w);
+  height:calc(var(--zone-w) * 86 / 59);
+  aspect-ratio:unset;
+}
 .zone.clickable{cursor:pointer}.zone.clickable:hover{border-color:rgba(201,168,76,.4);background:rgba(201,168,76,.04)}
 .zone.mzone{border-color:rgba(240,192,64,.18)}
 .zone.szone{border-color:rgba(10,160,128,.18)}
@@ -226,6 +248,18 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .zone.extra-deck-zone:hover{border-color:rgba(150,80,255,.6);background:rgba(80,30,160,.2)}
 .extra-zone-label{font-size:.42rem;color:#9966ff;font-family:var(--cinzel);letter-spacing:.04em;text-align:center;line-height:1.3;pointer-events:none}
 /* Extra summon tabs */
+/* Extra deck summon panel */
+.extra-summon-panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:8500;background:var(--bg2);border:1px solid rgba(150,80,255,.6);border-radius:5px;padding:.7rem .8rem;box-shadow:0 0 32px rgba(100,30,180,.5);max-width:92vw;max-height:85vh;overflow-y:auto;min-width:280px}
+.extra-summon-panel-title{font-family:'Cinzel Decorative',serif;font-size:.85rem;color:#bb66ff;margin-bottom:.5rem;display:flex;align-items:center;justify-content:space-between;gap:.6rem}
+.extra-card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:5px;margin-bottom:.5rem}
+.extra-card-item{position:relative;cursor:pointer;border:1.5px solid var(--border);border-radius:3px;overflow:hidden;transition:all .15s;aspect-ratio:3/4.2;background:var(--bg3);display:flex;flex-direction:column;user-select:none}
+.extra-card-item.can-summon{border-color:rgba(100,255,100,.5)}.extra-card-item.can-summon:hover{border-color:#88ff88;transform:translateY(-3px) scale(1.05);box-shadow:0 4px 14px rgba(80,220,80,.35)}
+.extra-card-item.cannot-summon{opacity:.42;cursor:not-allowed}
+.extra-card-reason{position:absolute;bottom:18px;left:0;right:0;background:rgba(0,0,0,.82);font-size:.4rem;color:#ff9090;text-align:center;padding:1px 2px;font-family:var(--cinzel);line-height:1.2}
+.extra-card-ok-badge{position:absolute;top:2px;right:2px;background:rgba(60,200,60,.85);color:#000;font-size:.5rem;font-family:var(--cinzel);padding:1px 3px;border-radius:1px;pointer-events:none}
+/* Duel scale slider */
+.duel-scale-bar{display:flex;align-items:center;gap:.4rem;padding:.18rem .7rem;background:var(--bg2);border-bottom:1px solid var(--border);font-family:var(--cinzel);font-size:.63rem;color:var(--muted);flex-shrink:0}
+.duel-scale-bar input[type=range]{accent-color:var(--gold);cursor:pointer;width:90px}
 .extra-summon-tabs{display:flex;gap:.3rem;margin-bottom:.6rem;flex-wrap:wrap}
 .extra-summon-tab{padding:.25rem .6rem;font-family:var(--cinzel);font-size:.68rem;cursor:pointer;border:1px solid var(--border);border-radius:2px;color:var(--muted);transition:all .15s}
 .extra-summon-tab.on{border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,.08)}
@@ -275,7 +309,7 @@ function init(){
   const cards=DB.getCards();
   CARDDB=buildCardIndex(cards);
   // 저장된 UI 스케일 복원
-  const savedScale=parseFloat(localStorage.getItem('ui_scale')||'0.82');
+  const savedScale=parseFloat(localStorage.getItem('ui_scale')||'0.50');
   applyUIScale(savedScale);
   render();
 }
@@ -322,7 +356,7 @@ function startDuel(playerDeckIds){
   App.duel.lastResult=playerDeckIds;
   App.result=null;
   App.logs=[];
-  App.ui={selectedHand:null,summonMode:false,summonType:null,attackingZone:null,targetMode:null,chainQueue:null,extraSummonModal:null};
+  App.ui={selectedHand:null,summonMode:false,summonType:null,attackingZone:null,targetMode:null,chainQueue:null,extraSummonModal:null,gyEffectPanel:false};
   doDrawCard(0,5); doDrawCard(1,5);
   addLog('듀얼 시작! 선공: YOU','special');
   App.screen='duel';
@@ -1340,57 +1374,43 @@ function doSpecialSummonCard(cardId,pi,position,negateEff,action){
 //
 // 조건 예: "상대 필드에 앞면 표시 카드 n장 이상" 등
 // 내장 조건 함수로 처리 (JS 표현식 대신)
-
-const BUILTIN_CONDITIONS={
-  // 상대 필드 카드 수 조건
-  opp_field_count_ge(n,ctx){
-    const opp=ctx.state.players[1-ctx.controller];
-    const cnt=[...opp.monsterZones,...opp.spellZones].filter(z=>z&&z.faceUp).length;
-    return cnt>=n;
-  },
-  opp_monster_count_ge(n,ctx){
-    return ctx.state.players[1-ctx.controller].monsterZones.filter(z=>z).length>=n;
-  },
-  // LP 조건
-  my_lp_le(n,ctx){return ctx.state.players[ctx.controller].lp<=n;},
-  my_lp_ge(n,ctx){return ctx.state.players[ctx.controller].lp>=n;},
-  // 묘지 조건
-  my_gy_count_ge(n,ctx){return ctx.state.players[ctx.controller].graveyard.length>=n;},
-  // 전투 데미지 입은 직후 (상태 플래그)
-  took_battle_damage(ctx){return!!(ctx.state._lastTookBattleDamage);},
-  // 핸드 수
-  my_hand_count_le(n,ctx){return ctx.state.players[ctx.controller].hand.length<=n;},
-};
-
 function checkEffectActivationCondition(eff,fc,pi){
   const ctx={state:d(),cardDB:CARDDB,controller:pi,sourceCard:fc};
   const dv=d();
   const isMyTurn=dv.activePlayer===pi;
   const phase=dv.phase;
   const inMain=phase==='MAIN1'||phase==='MAIN2';
+  const isManual=eff.trigger==='manual';
 
-  // 1. activationLocation 체크 — 명시된 경우에만 검사
-  const loc=eff.activationLocation;
-  if(loc==='field'&&fc){
-    // uid로 필드 존재 확인 (참조 비교 대신)
-    const onField=dv.players[pi].monsterZones.some(z=>z&&z.uid===fc.uid&&z.faceUp)
-      ||dv.players[pi].spellZones.some(z=>z&&z.uid===fc.uid&&z.faceUp);
-    if(!onField)return{ok:false,reason:'필드에 앞면 표시 상태가 아닙니다'};
-  }else if(loc==='hand'&&fc){
-    if(!dv.players[pi].hand.includes(fc.cardId))return{ok:false,reason:'패에 카드가 없습니다'};
-  }else if(loc==='gy'&&fc){
-    if(!dv.players[pi].graveyard.includes(fc.cardId))return{ok:false,reason:'묘지에 카드가 없습니다'};
+  // 1. activationLocation 체크 — manual 효과에만 적용
+  if(isManual){
+    const loc=eff.activationLocation||'field';
+    if(loc==='field'&&fc){
+      const onField=dv.players[pi].monsterZones.some(z=>z&&z.uid===fc.uid&&z.faceUp)
+        ||dv.players[pi].spellZones.some(z=>z&&z.uid===fc.uid&&z.faceUp);
+      if(!onField)return{ok:false,reason:'필드에 앞면 표시 상태가 아닙니다'};
+    }else if(loc==='hand'){
+      // fc가 null일 때(패 카드 조회): cardId로 패에 있는지 확인
+      const cardId=fc?.cardId||fc;
+      const inHand=dv.players[pi].hand.includes(typeof cardId==='string'?cardId:cardId);
+      if(!inHand)return{ok:false,reason:'패에 카드가 없습니다'};
+    }else if(loc==='gy'){
+      if(fc){
+        const inGY=dv.players[pi].graveyard.includes(fc.cardId||fc);
+        if(!inGY)return{ok:false,reason:'묘지에 카드가 없습니다'};
+      }
+    }
+
+    // 2. activationScope 체크 — manual 효과에만 적용
+    const scope=eff.activationScope||'own_turn';
+    if(scope==='own_turn'&&!isMyTurn)return{ok:false,reason:'자신의 턴에만 발동 가능'};
+    if(scope==='opponent_turn'&&isMyTurn)return{ok:false,reason:'상대 턴에만 발동 가능'};
+
+    // 메인 페이즈 한정 (chainable이 아닌 경우)
+    if(!eff.chainable&&!inMain&&isMyTurn)return{ok:false,reason:'메인 페이즈에만 발동 가능'};
   }
 
-  // 2. activationScope 체크
-  const scope=eff.activationScope||'own_turn';
-  if(scope==='own_turn'&&!isMyTurn)return{ok:false,reason:'자신의 턴에만 발동 가능'};
-  if(scope==='opponent_turn'&&isMyTurn)return{ok:false,reason:'상대 턴에만 발동 가능'};
-
-  // 메인 페이즈 한정
-  if(loc==='field'&&!eff.chainable&&!inMain&&isMyTurn)return{ok:false,reason:'메인 페이즈에만 발동 가능'};
-
-  // 3. 내장 조건 체크
+  // 3. 내장 조건 체크 (모든 트리거 공통)
   if(eff.builtinConditions){
     for(const bc of eff.builtinConditions){
       const fn=BUILTIN_CONDITIONS[bc.type];
@@ -1568,7 +1588,7 @@ function render(){
 
 // ── TITLE ──
 function renderTitle(){
-  const scale=parseFloat(localStorage.getItem('ui_scale')||'0.82');
+  const scale=parseFloat(localStorage.getItem('ui_scale')||'0.50');
   return`<div class="title-bg"></div>
   <div class="title-screen">
     <div class="title-emblem">⚔</div>
@@ -1583,10 +1603,10 @@ function renderTitle(){
         <span style="font-family:var(--cinzel);font-size:.72rem;color:var(--muted);letter-spacing:.08em">UI 스케일</span>
         <span id="scale-val" style="font-family:var(--cinzel);font-size:.78rem;color:var(--gold)">${Math.round(scale*100)}%</span>
       </div>
-      <input type="range" min="60" max="120" value="${Math.round(scale*100)}" step="5"
+      <input type="range" min="30" max="120" value="${Math.round(scale*100)}" step="5"
         style="width:100%;accent-color:var(--gold);cursor:pointer"
         oninput="applyUIScale(this.value/100);document.getElementById('scale-val').textContent=this.value+'%'">
-      <div style="display:flex;justify-content:space-between;font-size:.62rem;color:var(--muted);margin-top:.3rem;font-family:var(--cinzel)"><span>60%</span><span>100%</span><span>120%</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:.62rem;color:var(--muted);margin-top:.3rem;font-family:var(--cinzel)"><span>30%</span><span>75%</span><span>120%</span></div>
     </div>
     <div style="font-size:.7rem;color:var(--muted);font-family:var(--cinzel);letter-spacing:.2em">카드 ${Object.keys(CARDDB).length}장 등록됨</div>
   </div>`;
@@ -1595,15 +1615,17 @@ function renderTitle(){
 function applyUIScale(scale){
   localStorage.setItem('ui_scale',scale);
   document.documentElement.style.setProperty('--ui-scale',scale);
-  document.documentElement.style.setProperty('--card-min',Math.round(58*scale)+'px');
-  document.documentElement.style.setProperty('--hand-card-w',Math.round(44*scale)+'px');
+  const cardMin=Math.round(58*scale);
+  const handW=Math.round(44*scale);
+  const zoneW=handW*3;
+  document.documentElement.style.setProperty('--card-min',cardMin+'px');
+  document.documentElement.style.setProperty('--hand-card-w',handW+'px');
+  document.documentElement.style.setProperty('--zone-w',zoneW+'px');
+  // field-scaler는 transform 없이 실제 크기 사용
   const scaler=document.getElementById('field-scaler');
   if(scaler){
-    scaler.style.transform=`scale(${scale})`;
-    scaler.style.transformOrigin='top center';
-    // scale < 1이면 아래 여백이 생기므로 음수 마진으로 당김
-    const h=scaler.offsetHeight||400;
-    scaler.style.marginBottom=scale<1?`${Math.round((scale-1)*h)}px`:'0';
+    scaler.style.transform='none';
+    scaler.style.marginBottom='0';
   }
 }
 
@@ -1716,8 +1738,15 @@ function renderDuel(){
   const dv=d();if(!dv)return'';
   const isMyTurn=dv.activePlayer===0;
   const cq=App.ui.chainQueue;
+  const scale=parseFloat(localStorage.getItem('ui_scale')||'0.50');
   return`<div class="duel">
     ${renderTopBar(dv)}
+    <div class="duel-scale-bar">
+      <span style="white-space:nowrap">🔍 스케일</span>
+      <input type="range" min="30" max="120" value="${Math.round(scale*100)}" step="5"
+        oninput="applyUIScale(this.value/100);document.getElementById('duel-scale-pct').textContent=this.value+'%'">
+      <span id="duel-scale-pct" style="color:var(--gold);min-width:30px">${Math.round(scale*100)}%</span>
+    </div>
     ${renderField(dv,isMyTurn)}
     ${renderCardActionsPanel(dv,isMyTurn)}
     ${renderActionBar(dv,isMyTurn)}
@@ -1725,7 +1754,76 @@ function renderDuel(){
   ${renderTooltipHTML()}
   ${renderCtxMenu()}
   ${renderModal()}
+  ${App.ui.extraSummonModal?renderExtraSummonPanel():''}
+  ${App.ui.gyEffectPanel?renderGYEffectPanel():''}
   ${cq?renderChainBanner(cq):''}`;
+}
+
+// ── 묘지 효과 패널 ──
+function renderGYEffectPanel(){
+  const p=player();
+  // 묘지 카드 중 activationLocation:'gy' manual 효과가 있는 것만
+  // 중복 cardId 제거 후 표시
+  const seen=new Set();
+  const gyCards=p.graveyard.map((id,gyIdx)=>{
+    if(seen.has(id))return null;
+    const card=CARDDB[id];if(!card)return null;
+    const effs=(card.effects||[]).filter(e=>e.trigger==='manual'&&(e.activationLocation||'field')==='gy');
+    if(!effs.length)return null;
+    seen.add(id);
+    return{id,card,gyIdx:p.graveyard.lastIndexOf(id),effs};
+  }).filter(Boolean);
+
+  const cardsHtml=gyCards.length?gyCards.map(({id,card,gyIdx,effs})=>{
+    const fc=getFrameColor(card);
+    // 각 효과별로 발동 가능 여부 체크
+    const gyFC={cardId:id,_usedEffects:[]};
+    const activatable=effs.filter(e=>canActivateEffect(e,gyFC,0,{}));
+    const canAct=activatable.length>0;
+    const firstReason=canAct?null:getEffectBlockReason(effs[0],gyFC,0);
+    return`<div class="extra-card-item ${canAct?'can-summon':'cannot-summon'}"
+      onclick="${canAct?`activateGYManualEffect('${id}',${gyIdx})`:''}"
+      onmouseenter="showTooltip(event,'${id}')" onmouseleave="hideTooltip()"
+      title="${canAct?'클릭하여 효과 발동':(firstReason||'조건 미충족')}">
+      <div class="pool-card-frame" style="background:${fc};position:absolute;inset:0;opacity:.18"></div>
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;position:relative;z-index:1">
+        <span style="font-size:1.4rem">${card.image||'?'}</span>
+      </div>
+      <div style="background:${fc}cc;color:rgba(0,0,0,.85);font-size:.48rem;font-family:var(--cinzel);padding:2px 3px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${card.name}</div>
+      ${canAct?`<div class="extra-card-ok-badge">발동</div>`:`<div class="extra-card-reason">${firstReason||'불가'}</div>`}
+      ${effs.map(e=>`<div style="position:absolute;top:2px;left:2px;right:${canAct?'2px':'20px'};font-size:.38rem;color:#ccaaff;background:rgba(0,0,0,.7);padding:1px 2px;font-family:var(--cinzel);line-height:1.3;border-radius:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.description||e.trigger}</div>`).join('')}
+    </div>`;
+  }).join('')
+  :`<div style="color:var(--muted);font-size:.8rem;grid-column:1/-1;text-align:center;padding:1.5rem">묘지 발동 효과 없음</div>`;
+
+  return`<div style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:8400" onclick="App.ui.gyEffectPanel=false;render()"></div>
+  <div class="extra-summon-panel" onclick="event.stopPropagation()">
+    <div class="extra-summon-panel-title">
+      <span>⚰ 묘지 효과 발동 (${p.graveyard.length}장)</span>
+      <div style="display:flex;gap:.4rem">
+        <button class="btn btn-outline btn-sm" onclick="App.ui.gyEffectPanel=false;App.modal={type:'gy',pi:0};render()">묘지 보기</button>
+        <button class="btn btn-red btn-sm" onclick="App.ui.gyEffectPanel=false;render()">✕</button>
+      </div>
+    </div>
+    <div style="font-size:.68rem;color:var(--muted);margin-bottom:.5rem;font-family:var(--cinzel)">조건을 만족하는 카드를 클릭해 효과를 발동하세요</div>
+    <div class="extra-card-grid">${cardsHtml}</div>
+  </div>`;
+}
+
+// 묘지 manual 효과 발동
+function activateGYManualEffect(cardId,gyIdx){
+  const card=CARDDB[cardId];if(!card)return;
+  const gyFC={cardId,_usedEffects:[]};
+  const effs=(card.effects||[]).filter(e=>
+    e.trigger==='manual'&&(e.activationLocation||'field')==='gy'&&canActivateEffect(e,gyFC,0,{})
+  );
+  if(!effs.length){addLog('발동 가능한 효과 없음.','danger');return;}
+  App.ui.gyEffectPanel=false;
+  if(effs.length===1){
+    executeOneEffect(effs[0],gyFC,0,()=>{checkLPWin();render();});
+  }else{
+    App.modal={type:'effectSelect',effects:effs,fc:gyFC,pi:0};render();
+  }
 }
 
 function renderChainBanner(cq){
@@ -1737,6 +1835,76 @@ function renderChainBanner(cq){
     <span style="color:var(--muted);font-size:.72rem">— ${opt.eff.description||opt.eff.trigger}</span>
     <button class="btn btn-purple btn-sm" onclick="respondChain(true,${cq.idx})">발동</button>
     <button class="btn btn-outline btn-sm" onclick="respondChain(false,${cq.idx})">패스</button>
+  </div>`;
+}
+
+// ── EXTRA DECK SUMMON PANEL (독립 오버레이) ──
+function renderExtraSummonPanel(){
+  const esm=App.ui.extraSummonModal;
+  const p=player();
+  const tab=esm.tab||'fusion';
+  const tabs=['fusion','synchro','xyz','link'];
+  // 탭에 해당하는 엑스트라 덱 카드 목록
+  const tabCards=p.extraDeck.map(id=>({id,card:CARDDB[id]})).filter(({card})=>card&&card.subtype===tab);
+
+  const tabHtml=tabs.map(t=>{
+    const req=EXTRA_SUMMON_REQS[t];
+    // 해당 탭에 소환 가능한 카드 수
+    const summonableCount=p.extraDeck.filter(id=>{
+      const c=CARDDB[id];
+      if(!c||c.subtype!==t)return false;
+      const r=EXTRA_SUMMON_REQS[t];
+      return r&&r.canSummon(c,0).ok;
+    }).length;
+    return`<div class="extra-summon-tab ${tab===t?'on':''}" onclick="App.ui.extraSummonModal.tab='${t}';render()"
+      style="${tab===t?'border-color:'+(req?.color||'var(--gold)')+';color:'+(req?.color||'var(--gold)'):''}">
+      ${req?.label||t}${summonableCount>0?` <span style="background:rgba(100,255,100,.2);color:#88ff88;font-size:.6rem;padding:0 3px;border-radius:2px">${summonableCount}</span>`:''}
+    </div>`;
+  }).join('');
+
+  const cardsHtml=tabCards.length?tabCards.map(({id,card})=>{
+    const fc=getFrameColor(card);
+    const req=EXTRA_SUMMON_REQS[tab];
+    const check=req?req.canSummon(card,0):{ok:false,reason:'미지원'};
+    // 소재 표시
+    const matsLabel=(card.fusionMaterials||[]).map(m=>{
+      if(typeof m==='string')return CARDDB[m]?.name||m;
+      if(m.any)return '아무 몬스터';if(m.race)return m.race;
+      if(m.attribute)return m.attribute;if(m.ids)return m.ids.map(i=>CARDDB[i]?.name||i).join('/');
+      return '?';
+    }).join('+');
+    return`<div class="extra-card-item ${check.ok?'can-summon':'cannot-summon'}"
+      onclick="${check.ok?`doExtraSummon('${id}')`:''}"
+      onmouseenter="showTooltip(event,'${id}')" onmouseleave="hideTooltip()"
+      title="${check.ok?'클릭하여 소환':check.reason}">
+      <div class="pool-card-frame" style="background:${fc};position:absolute;inset:0;opacity:.18"></div>
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;position:relative;z-index:1">
+        <span style="font-size:1.4rem">${card.image||'?'}</span>
+      </div>
+      <div style="background:${fc}cc;color:rgba(0,0,0,.85);font-size:.48rem;font-family:var(--cinzel);padding:2px 3px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${card.name}</div>
+      ${check.ok?`<div class="extra-card-ok-badge">OK</div>`:`<div class="extra-card-reason">${check.reason}</div>`}
+      ${matsLabel?`<div style="position:absolute;top:2px;left:2px;right:22px;font-size:.38rem;color:#cc88ff;background:rgba(0,0,0,.7);padding:1px 2px;font-family:var(--cinzel);line-height:1.3;border-radius:1px">${matsLabel}</div>`:''}
+      ${card.atk!=null?`<div style="position:absolute;bottom:17px;right:2px;font-size:.44rem;color:#f09090;background:rgba(0,0,0,.7);padding:1px 3px;font-family:var(--cinzel);border-radius:1px">${card.atk}</div>`:''}
+    </div>`;
+  }).join('')
+  :`<div style="color:var(--muted);font-size:.8rem;grid-column:1/-1;text-align:center;padding:1.5rem">${tab} 카드 없음</div>`;
+
+  const descMap={
+    fusion:'패/필드 소재로 융합 소환',
+    synchro:'필드 튜너+비튜너 레벨 합산',
+    xyz:'같은 레벨 몬스터 2체 이상',
+    link:'필드 비엑스트라 몬스터 사용',
+  };
+
+  return`<div style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:8400" onclick="App.ui.extraSummonModal=null;render()"></div>
+  <div class="extra-summon-panel" onclick="event.stopPropagation()">
+    <div class="extra-summon-panel-title">
+      <span>⟡ 엑스트라 덱 소환 (${p.extraDeck.length}장)</span>
+      <button class="btn btn-red btn-sm" onclick="App.ui.extraSummonModal=null;render()">✕</button>
+    </div>
+    <div class="extra-summon-tabs">${tabHtml}</div>
+    <div style="font-size:.68rem;color:var(--muted);margin-bottom:.5rem;font-family:var(--cinzel)">${descMap[tab]||''}</div>
+    <div class="extra-card-grid">${cardsHtml}</div>
   </div>`;
 }
 
@@ -1763,9 +1931,8 @@ function renderTopBar(dv){
 }
 
 function renderField(dv,isMyTurn){
-  const scale=parseFloat(localStorage.getItem('ui_scale')||'0.82');
   return`<div class="field-scaler-wrap">
-    <div class="field-scaler" id="field-scaler" style="transform:scale(${scale});transform-origin:top center">
+    <div class="field-scaler" id="field-scaler">
       <div class="field">
         ${renderSide(1,dv,isMyTurn,true)}
         <div class="field-divider"></div>
@@ -1930,17 +2097,19 @@ function renderCardActionsPanel(dv,isMyTurn){
         btns.push(`<button class="btn btn-outline btn-sm" disabled>릴리스 불가 (${existingMonsters}/${trib})</button>`);
       }
     }
-    // Manual effects — 불가 사유 표시 포함 (Bug 5)
+    // Manual effects from hand — activationLocation:'hand'인 것만 표시
     if(inMain){
-      const allManual=(card.effects||[]).filter(e=>e.trigger==='manual');
-      allManual.forEach((eff,ei)=>{
-        const ok=canActivateEffect(eff,null,0,{});
-        const reason=ok?null:getEffectBlockReason(eff,null,0);
+      const handManual=(card.effects||[]).filter(e=>e.trigger==='manual'&&(e.activationLocation||'field')==='hand');
+      handManual.forEach((eff)=>{
+        // fc 없이 조건 검사 (패 카드는 uid가 없음)
+        const fakeFC={cardId,_usedEffects:[]};
+        const ok=canActivateEffect(eff,fakeFC,0,{});
+        const reason=ok?null:getEffectBlockReason(eff,fakeFC,0);
         const label=eff.description||'효과 발동';
         if(ok){
-          btns.push(`<button class="btn btn-purple btn-sm" onclick="activateHandMonsterEffect(${idx})" title="${label}">${label}</button>`);
+          btns.push(`<button class="btn btn-purple btn-sm" onclick="activateHandManualEffect(${idx},'${eff.id}')" title="${label}">◈ ${label}</button>`);
         }else{
-          btns.push(`<button class="btn btn-outline btn-sm" disabled title="${reason||'조건 미충족'}" style="opacity:.4;cursor:not-allowed">${label} (불가)</button>`);
+          btns.push(`<button class="btn btn-outline btn-sm" disabled title="${reason||'조건 미충족'}" style="opacity:.4;cursor:not-allowed">◈ ${label} (불가)</button>`);
         }
       });
     }
@@ -2178,39 +2347,9 @@ function renderModal(){
       </div>
     </div>`;
   }
-    const esm=App.ui.extraSummonModal;
-    const p=player();
-    const tab=esm.tab||'fusion';
-    const tabs=['fusion','synchro','xyz','link'];
-    const tabCards=p.extraDeck.map(id=>({id,card:CARDDB[id]})).filter(({card})=>card&&card.subtype===tab);
-    return`<div class="modal-bg" onclick="App.ui.extraSummonModal=null;render()">
-      <div class="modal-box" onclick="event.stopPropagation()">
-        <div class="modal-title">엑스트라 덱 소환</div>
-        <div class="extra-summon-tabs">
-          ${tabs.map(t=>`<div class="extra-summon-tab ${tab===t?'on':''}" onclick="App.ui.extraSummonModal.tab='${t}';render()" style="${tab===t?'border-color:'+EXTRA_SUMMON_REQS[t]?.color+';color:'+EXTRA_SUMMON_REQS[t]?.color:''}">${EXTRA_SUMMON_REQS[t]?.label||t}</div>`).join('')}
-        </div>
-        <div class="modal-subtitle" style="margin-bottom:.5rem;font-size:.75rem;color:var(--muted)">
-          ${tab==='fusion'?'패/필드의 소재를 사용':tab==='synchro'?'필드의 튜너+비튜너 레벨 합산':tab==='xyz'?'같은 레벨 몬스터 2체 이상':tab==='link'?'필드의 비엑스트라 몬스터 사용':''}
-        </div>
-        <div class="card-select-grid">
-          ${tabCards.length?tabCards.map(({id,card})=>{
-            const fc=getFrameColor(card);
-            const req=EXTRA_SUMMON_REQS[tab];
-            const check=req?req.canSummon(card,0):{ok:false,reason:'미지원'};
-            return`<div class="pool-card" style="opacity:${check.ok?1:.4};cursor:${check.ok?'pointer':'default'}"
-              onclick="${check.ok?`doExtraSummon('${id}')`:''}"
-              onmouseenter="showTooltip(event,'${id}')" onmouseleave="hideTooltip()"
-              title="${check.ok?'클릭하여 소환':check.reason}">
-              <div class="pool-card-frame" style="background:${fc}"></div>
-              <div class="pool-card-img"><span style="font-size:1.5rem">${card.image||'?'}</span></div>
-              <div class="pool-card-footer" style="background:${fc}cc;color:rgba(0,0,0,.85)">${card.name}</div>
-              ${!check.ok?`<div style="position:absolute;bottom:24px;left:0;right:0;background:rgba(0,0,0,.7);font-size:.45rem;color:#ff9090;text-align:center;padding:1px 2px;font-family:var(--cinzel)">${check.reason}</div>`:''}
-            </div>`;
-          }).join(''):`<div style="color:var(--muted);font-size:.8rem;grid-column:1/-1;text-align:center;padding:1.5rem">${tab} 카드 없음</div>`}
-        </div>
-        <div class="modal-actions"><button class="btn btn-outline" onclick="App.ui.extraSummonModal=null;render()">닫기</button></div>
-      </div>
-    </div>`;
+  if(App.ui.extraSummonModal){
+    // extraSummonModal은 renderExtraSummonPanel()이 별도로 처리
+    return'';
   }
 
   return'';
@@ -2237,7 +2376,7 @@ function renderResult(){
 function returnToTitle(){
   document.querySelectorAll('.result-overlay').forEach(el=>el.remove());
   App.result=null;App.duel=null;App.screen='title';App.logs=[];
-  App.ui={selectedHand:null,summonMode:false,summonType:null,attackingZone:null,targetMode:null,chainQueue:null,extraSummonModal:null};
+  App.ui={selectedHand:null,summonMode:false,summonType:null,attackingZone:null,targetMode:null,chainQueue:null,extraSummonModal:null,gyEffectPanel:false};
   render();
 }
 
@@ -2312,21 +2451,27 @@ function startSetMode(handIdx){
   render();
 }
 
-// Activate monster effect from hand (e.g. from data - unusual, but handle)
-function activateHandMonsterEffect(handIdx){
+// 패 manual 효과 발동 (activationLocation:'hand')
+function activateHandManualEffect(handIdx,effId){
   const cardId=player().hand[handIdx];
   const card=CARDDB[cardId];
   if(!card)return;
-  const effs=(card.effects||[]).filter(e=>e.trigger==='manual');
+  const fakeFC={cardId,_usedEffects:[]};
+  let effs=(card.effects||[]).filter(e=>e.trigger==='manual'&&(e.activationLocation||'field')==='hand');
+  if(effId)effs=effs.filter(e=>e.id===effId);
+  effs=effs.filter(e=>canActivateEffect(e,fakeFC,0,{}));
   if(effs.length===0)return;
   App.ui.selectedHand=null;
   if(effs.length===1){
-    const fc={cardId,_usedEffects:[]};
-    executeOneEffect(effs[0],fc,0,()=>{checkLPWin();render();});
+    executeOneEffect(effs[0],fakeFC,0,()=>{checkLPWin();render();});
   }else{
-    App.modal={type:'effectSelect',effects:effs,fc:{cardId,_usedEffects:[]},pi:0,callback:null};
-    render();
+    App.modal={type:'effectSelect',effects:effs,fc:fakeFC,pi:0};render();
   }
+}
+
+// 구 함수 — 하위 호환 유지 (내부 fallback)
+function activateHandMonsterEffect(handIdx){
+  activateHandManualEffect(handIdx,null);
 }
 
 function confirmFusionSummon(cardId){
@@ -2343,19 +2488,19 @@ function selectEffect(idx){
   executeOneEffect(eff,fc,pi,()=>{checkLPWin();render();});
 }
 
-// Field monster right-click actions
+// Field monster click actions
 function showFieldMonsterActions(event,zoneIdx){
   const fc=player().monsterZones[zoneIdx];if(!fc)return;
   const card=CARDDB[fc.cardId];if(!card)return;
   const items=[{label:'표시 방향 변경',action:`changePos(${zoneIdx})`}];
-  // 수동 효과 — 발동 가능한 것과 불가인 것 모두 표시 (Bug 5)
-  const allManual=(card.effects||[]).filter(e=>e.trigger==='manual');
-  allManual.forEach(eff=>{
+  // activationLocation:'field'인 manual 효과만 표시
+  const fieldManual=(card.effects||[]).filter(e=>e.trigger==='manual'&&(e.activationLocation||'field')==='field');
+  fieldManual.forEach(eff=>{
     const ok=canActivateEffect(eff,fc,0,{});
     const reason=ok?null:getEffectBlockReason(eff,fc,0);
     const label=eff.description||'효과 발동';
     if(ok){
-      items.unshift({label:`◈ ${label}`,action:`activateFieldMonsterEffect(${zoneIdx})`});
+      items.unshift({label:`◈ ${label}`,action:`activateFieldMonsterEffect(${zoneIdx},'${eff.id}')`});
     }else{
       items.push({label:`◈ ${label} (${reason||'불가'})`,action:'',cls:'disabled'});
     }
@@ -2363,10 +2508,11 @@ function showFieldMonsterActions(event,zoneIdx){
   App.ctxMenu={x:event.clientX,y:event.clientY,items};render();
 }
 
-function activateFieldMonsterEffect(zoneIdx){
+function activateFieldMonsterEffect(zoneIdx,effId){
   const fc=player().monsterZones[zoneIdx];if(!fc)return;
   const card=CARDDB[fc.cardId];if(!card)return;
-  const effs=(card.effects||[]).filter(e=>e.trigger==='manual'&&canActivateEffect(e,fc,0,{}));
+  let effs=(card.effects||[]).filter(e=>e.trigger==='manual'&&(e.activationLocation||'field')==='field'&&canActivateEffect(e,fc,0,{}));
+  if(effId)effs=effs.filter(e=>e.id===effId);
   if(effs.length===0)return;
   if(effs.length===1){
     executeOneEffect(effs[0],fc,0,()=>{checkLPWin();render();});
@@ -2417,7 +2563,24 @@ function toBattle(){
   advancePhase();
 }
 
-function showGY(pi){App.modal={type:'gy',pi};render();}
+function showGY(pi){
+  // 플레이어 묘지(pi===0)이고 메인 페이즈이면 묘지 효과 패널 표시
+  const dv=d();
+  if(pi===0&&dv&&dv.activePlayer===0&&(dv.phase==='MAIN1'||dv.phase==='MAIN2')){
+    // 묘지에 activationLocation:'gy' manual 효과 가진 카드가 있는지 확인
+    const gyCards=player().graveyard.map(id=>CARDDB[id]).filter(c=>{
+      if(!c)return false;
+      return(c.effects||[]).some(e=>e.trigger==='manual'&&(e.activationLocation||'field')==='gy');
+    });
+    if(gyCards.length>0){
+      App.ui.gyEffectPanel=true;
+      App.modal=null;
+      render();
+      return;
+    }
+  }
+  App.modal={type:'gy',pi};render();
+}
 
 function toggleDiscard(idx){
   const m=App.modal;
