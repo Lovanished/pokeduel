@@ -731,6 +731,7 @@ body {
   <div class="battle-header">
     <div class="battle-day-label" id="battle-day">DAY 91 — 초기 압박</div>
     <div class="battle-status">
+      <div class="battle-stat">체력: <span id="b-hp" style="color:var(--green-bright)">100</span></div>
       <div class="battle-stat">벽: <span id="b-wall">100</span>%</div>
       <div class="battle-stat">공기: <span id="b-air">100</span>%</div>
       <div class="battle-stat">생존: <span id="b-alive">12</span>/12</div>
@@ -751,7 +752,8 @@ body {
         수리포인트(L1~B4) 접근 — 자동 수리<br>
         환풍구(환풍L/R) 접근 — 자동 재기동<br>
         전압장치(⚡전압) 접근 — 방송 교란<br>
-        ※ 노이즈 발생 시 10초 내 전압장치로!
+        ※ 노이즈 발생 시 10초 내 전압장치로!<br>
+        ※ 9 개체 충돌 시 체력 감소 — 체력 0 = 게임 오버
       </div>
     </div>
 
@@ -1048,6 +1050,34 @@ function scene_hide_refuse() {
   [{ text:'계속 버틴다 (DAY 3~7)', fn:'scene_early_explore' }]);
 }
 
+// 누락 함수 — scene_day1에서 호출됨
+function scene_day2_ration() {
+  G.day = 2;
+  renderScene('DAY 2 — 첫 번째 배급', '식량 문제',
+  `<p>다음 날 아침. 철제 문이 열리며 배급이 들어온다. 포장된 식량과 물.</p>
+  <p><strong style="color:var(--amber-bright)">예체능 엘리트</strong>가 벌떡 일어난다. "됐다! 먹자. 체력 유지가 먼저야."</p>
+  <p><strong style="color:var(--text)">생명과학 엘리트</strong>가 조용히 손을 들어 막는다. "잠깐요. 급식실에서 있었던 일 생각해보세요. 혹시 배급에도 뭔가 있는 건 아닐까요?"</p>
+  <div class="scene-atmosphere">12명의 눈이 당신을 향한다. 당신의 결정을 기다리고 있다.</div>`,
+  [
+    { text:'배급을 먹지 말자고 설득한다 — 위험하다고 경고', fn:'scene_refuse_food' },
+    { text:'일단 먹는다 — 지금 당장 굶을 수는 없다', cls:'danger', fn:'scene_eat_food' },
+    { text:'배급을 몰래 버린다 — 먹는 척하면서', fn:'scene_hide_refuse' },
+  ]);
+}
+
+// 누락 함수 — scene_day1에서 호출됨
+function scene_explore_d1() {
+  renderScene('DAY 1', '첫 탐색',
+  `<p>당신은 수감 공간을 조심스럽게 살펴본다. 벽면의 오래된 긁힌 자국들, 이전 수감자들의 흔적. 여기가 처음이 아니라는 것이 분명하다.</p>
+  <p>물리 엘리트가 다가온다. "저 환풍구 보여요? 두 개가 작동하고 있어요. 이 공간 공기 관리가 되고 있다는 거예요."</p>
+  <p>화학 엘리트가 조용히 말한다. "공기 조성이... 약간 이상한 것 같아요. 정확히 분석하려면 더 시간이 필요해요."</p>
+  <div class="scene-info">🔍 환풍구와 공기 상태 파악 — 추후 생존에 중요한 요소</div>`,
+  [
+    { text:'사회문화 엘리트에게도 말을 건다', fn:'scene_calm_social' },
+    { text:'생명과학 엘리트와 배급에 대해 이야기한다', fn:'scene_day2_ration' },
+  ]);
+}
+
 function scene_convince_sports() {
   renderScene('DAY 3', '예체능 엘리트 설득',
   `<p>"들어봐. 네가 지금 당장 배고픔을 참는 건 힘들어. 하지만 저 배급을 먹었다가 급식실처럼 되면—"</p>
@@ -1269,6 +1299,10 @@ const BC = {
   gasTriggered:false,
   broadcastTriggers:{ 93:30, 96:35, 99:30 },
   ventStops:[], nextVentStop:0,
+  // ── 플레이어 체력 ──
+  playerHP: 100,
+  playerMaxHP: 100,
+  playerDead: false,
 };
 
 function initBattleCanvas() {
@@ -1339,8 +1373,10 @@ function initBattleState(day) {
   BC.voltageCharging=false; BC.voltageTimer=0;
   BC.entities=[]; BC.entityId=0; BC.tickCount=0;
   BC.gasTriggered=false;
-  // Reset player to center
-  if(BC.W && BC.H){ BC.px=BC.W*0.5; BC.py=BC.H*0.55; }
+  // 웨이브 전환 시 플레이어 위치는 리셋하지 않음 (첫 진입 시만 초기화)
+  if(day===91 && BC.W && BC.H){ BC.px=BC.W*0.5; BC.py=BC.H*0.55; }
+  // 플레이어 체력은 웨이브 간 유지 (첫 진입 시만 초기화)
+  if(day===91){ BC.playerHP=100; BC.playerDead=false; }
   // Reset interaction cooldowns
   for(const k in _icd) delete _icd[k];
   _entityHitCd=0;
@@ -1531,22 +1567,23 @@ function checkInteractions(){
       const hitR=e.type==='slow'?22:16;
       if(Math.hypot(BC.px-e.x,BC.py-e.y)<hitR+BC.pSize){
         _entityHitCd=now+1200; // 1.2s cooldown per hit
-        addBattleLog('danger',`9 개체 충돌! 벽이 손상된다!`);
-        // entity contact damages the nearest wall point
-        let minDist=Infinity, nearPt=null;
-        for(const[,obj]of Object.entries(BC.objects)){
-          if(obj.type==='repair'){
-            const d=Math.hypot(BC.px-obj.x,BC.py-obj.y);
-            if(d<minDist){minDist=d;nearPt=obj.pt;}
-          }
-        }
-        if(nearPt) BC.wallHP[nearPt]=Math.max(0,BC.wallHP[nearPt]-18);
+        // ── 벽 대신 플레이어 체력 감소 ──
+        const dmgAmt = e.type==='slow'?8:e.type==='dash'?15:e.type==='jump'?12:10;
+        BC.playerHP = Math.max(0, BC.playerHP - dmgAmt);
+        addBattleLog('danger',`9 개체 충돌! 체력 -${dmgAmt} → ${BC.playerHP}`);
         // Visual shake effect on canvas
         if(BC.canvas){
           BC.canvas.style.transition='transform 0.05s';
           BC.canvas.style.transform='translateX(6px)';
           setTimeout(()=>{BC.canvas.style.transform='translateX(-6px)';},55);
           setTimeout(()=>{BC.canvas.style.transform='';},110);
+        }
+        // 체력 0 → 매장된 진실 엔딩
+        if(BC.playerHP<=0 && !BC.playerDead){
+          BC.playerDead=true;
+          stopBattle();
+          setTimeout(ending_buried_truth, 600);
+          return;
         }
         updateBattleUI();
         break;
@@ -1750,14 +1787,28 @@ function nearestWallCenter(ex,ey,W,H,w){
   return cs.reduce((b,c)=>Math.hypot(ex-c.x,ey-c.y)<Math.hypot(ex-b.x,ey-b.y)?c:b);
 }
 function drawPlayer(ctx){
-  ctx.shadowColor='#44aacc';ctx.shadowBlur=12;
+  // 체력에 따른 글로우 색상
+  const hpRatio = BC.playerHP / BC.playerMaxHP;
+  const glowCol = hpRatio>0.6?'#44aacc':hpRatio>0.3?'#ffaa44':'#ff4444';
+  ctx.shadowColor=glowCol;ctx.shadowBlur=12;
   ctx.beginPath();ctx.arc(BC.px,BC.py,BC.pSize,0,Math.PI*2);
   ctx.fillStyle='rgba(51,102,119,0.9)';ctx.fill();
-  ctx.strokeStyle='#44aacc';ctx.lineWidth=2;ctx.stroke();
+  ctx.strokeStyle=glowCol;ctx.lineWidth=2;ctx.stroke();
   ctx.shadowBlur=0;
   ctx.fillStyle='#e8e8f5';ctx.font='bold 9px monospace';
   ctx.textAlign='center';ctx.textBaseline='middle';
   ctx.fillText('P',BC.px,BC.py);
+
+  // 체력바 (플레이어 위)
+  const bw=36, bh=5, bx=BC.px-bw/2, by=BC.py-BC.pSize-10;
+  ctx.fillStyle='#1a1a22';ctx.fillRect(bx,by,bw,bh);
+  const fillCol=hpRatio>0.6?'#44aa44':hpRatio>0.3?'#cc8833':'#cc3333';
+  ctx.fillStyle=fillCol;ctx.fillRect(bx,by,bw*hpRatio,bh);
+  ctx.strokeStyle='#2a2a35';ctx.lineWidth=1;ctx.strokeRect(bx,by,bw,bh);
+  // 숫자
+  ctx.fillStyle='#c8c8e0';ctx.font='7px monospace';
+  ctx.textAlign='center';ctx.textBaseline='bottom';
+  ctx.fillText(`HP:${BC.playerHP}`,BC.px,by-1);
 }
 function drawProximityRings(ctx){
   for(const[,obj]of Object.entries(BC.objects)){
@@ -1837,6 +1888,11 @@ function killStudentBattle(){
 function updateBattleUI(){
   const avg=Math.round(Object.values(BC.wallHP).reduce((a,b)=>a+b,0)/8);
   const $=id=>document.getElementById(id);
+  const hpEl=$('b-hp');
+  if(hpEl){
+    hpEl.textContent=BC.playerHP;
+    hpEl.style.color=BC.playerHP>60?'var(--green-bright)':BC.playerHP>30?'var(--amber-bright)':'var(--red-bright)';
+  }
   $('b-wall').textContent=avg;
   $('b-air').textContent=Math.round(BC.airQuality);
   $('b-alive').textContent=aliveCount();
@@ -1872,9 +1928,36 @@ function scene_day100() {
   showScreen('game-screen');
   G.day = 100;
   const alive = aliveCount();
-  const allAlive = alive >= 10;
+  // 진엔딩 조건: allSurvive 플래그(학생 사망 없음) + 50일 잔류 + TP 제한
+  const allSurvived = G.flags.allSurvive;
   const tpLow = G.tp <= 3;
-  const canFight = allAlive && G.flags.day50Stay;
+  // 진엔딩 I (P 제거): 전원 생존 + 50일 잔류 + TP≤3
+  const canTrue1 = allSurvived && G.flags.day50Stay && tpLow;
+  // 진엔딩 II (P 합류): 전원 생존 + 50일 잔류
+  const canTrue2 = allSurvived && G.flags.day50Stay;
+
+  let choiceText = '';
+  if(canTrue1){
+    choiceText = `전원 생존 달성 · TP ${G.tp} — 진엔딩 분기 가능`;
+  } else if(canTrue2){
+    choiceText = `전원 생존 달성 · TP ${G.tp} — P 제거 선택지 잠금 (TP 초과)`;
+  } else if(!allSurvived){
+    choiceText = `학생 사망 발생 · 진엔딩 불가 — 선택지 제한됨`;
+  } else {
+    choiceText = `50일 잔류 없음 · 진엔딩 불가`;
+  }
+
+  const choices = [];
+  if(canTrue1){
+    choices.push({ text:'P를 제거한다 — 이 세계를 지킨다', fn:'ending_true1' });
+  }
+  if(canTrue2){
+    choices.push({ text:'P와 함께한다 — 새로운 세계를 받아들인다', cls:'special', fn:'ending_true2' });
+  }
+  if(!canTrue1 && !canTrue2){
+    choices.push({ text:'최후를 맞이한다', cls:'danger', fn:'ending_bad_100' });
+    choices.push({ text:'P와 함께한다 — 살아남기 위해', cls:'special', fn:'ending_true2' });
+  }
 
   renderScene('DAY 100 — 최종 결전', '교장 P',
   `<p>100일째 아침. 바리케이트 외부의 공격이 멈췄다. 9 개체들이 비정상적으로 정지해 있다.</p>
@@ -1883,14 +1966,9 @@ function scene_day100() {
   <p>그는 처음부터 이렇게 될 것을 알고 있었다는 듯 차분하다.</p>
   <blockquote style="border-left:2px solid var(--amber);padding:12px 16px;margin:16px 0;font-size:14px;color:var(--amber-bright);font-family:'Share Tech Mono',monospace;line-height:1.8">"당신들은 살아남았군요. 예상보다 많이. 그것 자체가 자격의 증명입니다. 새로운 세계는 강한 자만이 남습니다. 당신들도 그 자격이 있어요."</blockquote>
   <p>주변에서 남아 있던 9 개체들이 다시 활성화된다. 최후의 전투가 시작된다.</p>
-  <div class="scene-info">현재: TP ${G.tp} / 생존 ${alive}명 / 준비 ${G.flags.itemsReady?'완료':'미흡'}</div>`,
-  canFight ? [
-    { text:`P를 제거한다 ${tpLow?'':'(TP 초과 — 제한됨)'}`, cls: tpLow ? '' : 'danger', fn: tpLow ? 'ending_true1' : 'ending_bad_100' },
-    { text:'P와 함께한다 — 새로운 세계를 받아들인다', cls:'special', fn:'ending_true2' },
-  ] : [
-    { text:'최후를 맞이한다', cls:'danger', fn:'ending_bad_100' },
-    { text:'P와 함께한다', cls:'special', fn:'ending_true2' },
-  ]);
+  <div class="scene-info">현재: TP ${G.tp} / 생존 ${alive}명 / 준비 ${G.flags.itemsReady?'완료':'미흡'}</div>
+  <div class="scene-atmosphere">${choiceText}</div>`,
+  choices);
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -1900,7 +1978,7 @@ function scene_day100() {
 function showEnding(type, title, story, stats) {
   stopBattle();
   showScreen('ending-screen');
-  const labels = { bad:'베드 엔딩', normal:'노멀 엔딩', true:'진 엔딩 I', true2:'진 엔딩 II' };
+  const labels = { bad:'베드 엔딩', normal:'노멀 엔딩', true:'진 엔딩 I', true2:'진 엔딩 II', buried:'베드 엔딩' };
   document.getElementById('ending-content').innerHTML = `
     <div class="ending-type-label ${type}">${labels[type]||type}</div>
     <div class="ending-title-big ${type}">${title}</div>
@@ -1910,6 +1988,21 @@ function showEnding(type, title, story, stats) {
     </div>
     <button class="restart-btn" onclick="resetGame()">다시 시작</button>
   `;
+}
+
+// ── 매장된 진실 — 플레이어 체력 0 베드엔딩 ──
+function ending_buried_truth() {
+  showEnding('bad','매장된 진실',
+  `<p>9 개체의 공격이 쌓였다. 당신은 더 이상 움직일 수 없다.</p>
+  <p>바리케이트 내부 바닥에 쓰러지며 천장을 바라본다. 환풍구가 돌아가는 소리만 들린다.</p>
+  <p>학생들이 당신 곁에 모여든다. 그러나 아무도 막을 수 없다. 당신의 의식이 꺼져간다.</p>
+  <p>지하실에서 벌어진 일은 영원히 알려지지 않을 것이다. P의 계획은 계속된다. 당신이 알고 있던 진실은 이 지하실 안에 영원히 매장된다.</p>
+  <div style="margin-top:16px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--dim);letter-spacing:2px">— 모든 것은 여기서 끝났다</div>`,
+  [
+    {val:0,label:'최종 체력'},
+    {val:G.tp,label:'최종 TP'},
+    {val:aliveCount(),label:'남은 생존자'},
+  ]);
 }
 
 function ending_bad_escape49() {
@@ -2012,6 +2105,7 @@ function resetGame() {
   // Reset BC
   BC.broadcastsFired={93:false,96:false,99:false};
   BC.entities=[];BC.waveProgress=0;BC.tickCount=0;
+  BC.playerHP=100; BC.playerDead=false;
   for(const k in _icd) delete _icd[k];
   _entityHitCd=0;
   showScreen('title-screen');
