@@ -1,0 +1,2029 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>지하실 — 실험 구역 B</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;600;900&family=Share+Tech+Mono&display=swap');
+
+:root {
+  --black: #0a0a0a;
+  --deep: #111115;
+  --panel: #16161c;
+  --surface: #1e1e26;
+  --border: #2a2a35;
+  --dim: #3a3a48;
+  --muted: #5a5a72;
+  --mid: #8a8aaa;
+  --text: #c8c8e0;
+  --bright: #e8e8f5;
+  --white: #f5f5ff;
+  --red: #cc3333;
+  --red-dim: #441111;
+  --red-bright: #ff4444;
+  --amber: #cc8833;
+  --amber-dim: #442211;
+  --amber-bright: #ffaa44;
+  --teal: #336677;
+  --teal-bright: #44aacc;
+  --green: #447744;
+  --green-bright: #66bb66;
+  --purple: #553388;
+  --purple-bright: #8866cc;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--black);
+  color: var(--text);
+  font-family: 'Noto Serif KR', serif;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* ── SCREENS ── */
+.screen { display: none; width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; }
+.screen.active { display: flex; }
+
+/* ── TITLE SCREEN ── */
+#title-screen {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--black);
+  position: relative;
+  overflow: hidden;
+}
+
+.noise-bg {
+  position: absolute; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+.scan-lines {
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px);
+  pointer-events: none;
+}
+
+.title-content {
+  position: relative; z-index: 1;
+  text-align: center;
+  animation: fadeIn 2s ease;
+}
+
+.title-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 6px;
+  color: var(--red);
+  text-transform: uppercase;
+  margin-bottom: 24px;
+  opacity: 0.8;
+}
+
+.title-main {
+  font-size: clamp(72px, 12vw, 128px);
+  font-weight: 900;
+  color: var(--white);
+  letter-spacing: -4px;
+  line-height: 0.9;
+  position: relative;
+}
+
+.title-main::after {
+  content: '지하실';
+  position: absolute; top: 3px; left: 3px;
+  color: var(--red);
+  opacity: 0.3;
+  z-index: -1;
+}
+
+.title-sub {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 13px;
+  color: var(--muted);
+  letter-spacing: 3px;
+  margin-top: 20px;
+  margin-bottom: 60px;
+}
+
+.title-btn {
+  background: transparent;
+  border: 1px solid var(--red);
+  color: var(--red);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 14px;
+  letter-spacing: 4px;
+  padding: 14px 48px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+}
+.title-btn:hover { background: var(--red); color: var(--white); }
+
+.title-warning {
+  margin-top: 40px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  color: var(--dim);
+  letter-spacing: 2px;
+  line-height: 1.8;
+}
+
+/* ── GAME SCREEN ── */
+#game-screen {
+  flex-direction: column;
+  background: var(--deep);
+}
+
+.game-header {
+  height: 44px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 20px;
+  flex-shrink: 0;
+}
+
+.header-day {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  color: var(--red);
+  letter-spacing: 2px;
+}
+
+.header-tp {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 1px;
+}
+
+.header-tp span { color: var(--amber); }
+
+.header-students {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.header-students span { color: var(--green-bright); }
+
+.header-title {
+  margin-left: auto;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  color: var(--dim);
+  letter-spacing: 3px;
+}
+
+.game-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: 220px;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.sidebar-section {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.student-list { display: flex; flex-direction: column; gap: 4px; }
+
+.student-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  transition: background 0.15s;
+}
+
+.student-item.alive { color: var(--text); }
+.student-item.dead { color: var(--dim); text-decoration: line-through; }
+.student-item.infected { color: var(--red); }
+
+.student-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.alive .student-dot { background: var(--green-bright); }
+.dead .student-dot { background: var(--dim); }
+.infected .student-dot { background: var(--red); animation: pulse 1s infinite; }
+
+.item-list { display: flex; flex-direction: column; gap: 4px; }
+
+.item-entry {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  color: var(--mid);
+}
+
+.item-count { color: var(--amber); }
+
+.flag-list { display: flex; flex-direction: column; gap: 4px; }
+
+.flag-entry {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  padding: 3px 6px;
+  border-radius: 2px;
+}
+.flag-entry.on { background: rgba(68,170,68,0.15); color: var(--green-bright); }
+.flag-entry.off { background: rgba(90,90,114,0.15); color: var(--dim); }
+
+/* ── MAIN PANEL ── */
+.main-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.scene-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 32px 40px;
+}
+
+.scene-day-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 4px;
+  color: var(--red);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+
+.scene-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--bright);
+  margin-bottom: 20px;
+  line-height: 1.4;
+}
+
+.scene-text {
+  font-size: 15px;
+  line-height: 2;
+  color: var(--text);
+  margin-bottom: 20px;
+  max-width: 660px;
+}
+
+.scene-text p { margin-bottom: 16px; }
+
+.scene-atmosphere {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  border-left: 2px solid var(--border);
+  padding: 8px 12px;
+  margin: 16px 0;
+  line-height: 1.8;
+  max-width: 500px;
+}
+
+.scene-alert {
+  background: var(--red-dim);
+  border: 1px solid var(--red);
+  border-radius: 3px;
+  padding: 12px 16px;
+  font-size: 13px;
+  color: var(--red-bright);
+  margin: 16px 0;
+  max-width: 500px;
+  font-family: 'Share Tech Mono', monospace;
+  letter-spacing: 1px;
+}
+
+.scene-info {
+  background: rgba(51,102,119,0.2);
+  border: 1px solid var(--teal);
+  border-radius: 3px;
+  padding: 12px 16px;
+  font-size: 13px;
+  color: var(--teal-bright);
+  margin: 16px 0;
+  max-width: 500px;
+  font-family: 'Share Tech Mono', monospace;
+}
+
+/* ── CHOICES ── */
+.choices-area {
+  padding: 20px 40px;
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.choice-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'Noto Serif KR', serif;
+  font-size: 14px;
+  padding: 12px 20px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: 2px;
+  line-height: 1.5;
+}
+
+.choice-btn:hover {
+  border-color: var(--teal-bright);
+  color: var(--bright);
+  background: rgba(51,102,119,0.1);
+  padding-left: 28px;
+}
+
+.choice-btn.danger:hover {
+  border-color: var(--red);
+  color: var(--red-bright);
+  background: var(--red-dim);
+}
+
+.choice-btn.special {
+  border-color: var(--purple);
+  color: var(--purple-bright);
+}
+.choice-btn.special:hover {
+  background: rgba(85,51,136,0.2);
+  border-color: var(--purple-bright);
+}
+
+/* ── BATTLE SCREEN ── */
+#battle-screen {
+  flex-direction: column;
+  background: var(--black);
+}
+
+.battle-header {
+  padding: 8px 20px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--red);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-shrink: 0;
+}
+
+.battle-day-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 13px;
+  color: var(--red-bright);
+  letter-spacing: 3px;
+}
+
+.battle-status {
+  display: flex;
+  gap: 16px;
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+.battle-stat {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+.battle-stat span { color: var(--amber-bright); font-size: 13px; font-weight: bold; }
+
+.battle-body {
+  flex: 1;
+  display: flex;
+  gap: 0;
+  overflow: hidden;
+}
+
+/* ── CANVAS ARENA ── */
+.battle-arena {
+  flex: 1;
+  position: relative;
+  background: var(--deep);
+  overflow: hidden;
+}
+
+#battle-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* HUD overlay inside arena */
+.arena-hud {
+  position: absolute;
+  top: 8px; left: 0; right: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.broadcast-alert {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 13px;
+  color: var(--amber-bright);
+  background: rgba(0,0,0,0.85);
+  border: 1px solid var(--amber);
+  padding: 6px 20px;
+  border-radius: 2px;
+  letter-spacing: 2px;
+  animation: blink 0.4s infinite;
+  display: none;
+}
+.broadcast-alert.visible { display: block; }
+.broadcast-alert.noise { border-color: var(--amber); color: var(--amber-bright); }
+.broadcast-alert.fail  { border-color: var(--red); color: var(--red-bright); }
+
+.controls-hint {
+  position: absolute;
+  bottom: 8px; left: 8px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  color: var(--dim);
+  line-height: 1.8;
+  pointer-events: none;
+}
+
+/* Repair points (canvas labels only, no DOM buttons) */
+.repair-pt {
+  width: 32px; height: 18px;
+  background: var(--surface);
+  border: 1px solid var(--dim);
+  border-radius: 2px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 8px;
+  color: var(--muted);
+}
+.repair-pt.damaged { border-color: var(--amber); color: var(--amber); animation: blink 1s infinite; }
+.repair-pt.critical { border-color: var(--red); color: var(--red); animation: blink 0.4s infinite; }
+.repair-pt.breached { background: var(--red-dim); border-color: var(--red-bright); color: var(--red-bright); }
+
+/* 9-entities (legacy, canvas draws them now) */
+.entity-9 {
+  position: absolute;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: var(--red-dim);
+  border: 1px solid var(--red);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px;
+  color: var(--red-bright);
+  font-family: 'Share Tech Mono', monospace;
+  transition: all 0.4s ease;
+  pointer-events: none;
+}
+
+/* Battle log */
+.battle-log {
+  width: 260px;
+  background: var(--panel);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.battle-log-header {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 2px;
+}
+
+.battle-log-entries {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.log-entry {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  padding: 4px 8px;
+  border-radius: 2px;
+  line-height: 1.5;
+  animation: slideIn 0.2s ease;
+}
+.log-entry.danger { color: var(--red-bright); background: rgba(68,17,17,0.5); }
+.log-entry.warning { color: var(--amber); background: rgba(68,34,17,0.5); }
+.log-entry.info { color: var(--teal-bright); background: rgba(51,68,80,0.5); }
+.log-entry.success { color: var(--green-bright); background: rgba(34,51,34,0.5); }
+.log-entry.system { color: var(--mid); }
+
+.wave-progress {
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.wave-bar {
+  height: 3px;
+  background: var(--surface);
+  margin-top: 4px;
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.wave-fill {
+  height: 100%;
+  background: var(--red);
+  transition: width 0.5s;
+}
+
+/* ── ENDING SCREEN ── */
+#ending-screen {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--black);
+  position: relative;
+  overflow: hidden;
+}
+
+.ending-content {
+  position: relative; z-index: 1;
+  text-align: center;
+  max-width: 600px;
+  padding: 40px;
+  animation: fadeIn 1.5s ease;
+}
+
+.ending-type-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 6px;
+  margin-bottom: 20px;
+  text-transform: uppercase;
+}
+
+.ending-type-label.bad { color: var(--red); }
+.ending-type-label.normal { color: var(--amber); }
+.ending-type-label.true { color: var(--purple-bright); }
+.ending-type-label.true2 { color: var(--teal-bright); }
+
+.ending-title-big {
+  font-size: clamp(36px, 6vw, 64px);
+  font-weight: 900;
+  line-height: 1.1;
+  margin-bottom: 24px;
+}
+
+.ending-title-big.bad { color: var(--red-bright); }
+.ending-title-big.normal { color: var(--text); }
+.ending-title-big.true { color: var(--purple-bright); }
+.ending-title-big.true2 { color: var(--teal-bright); }
+
+.ending-story {
+  font-size: 14px;
+  line-height: 2;
+  color: var(--mid);
+  margin-bottom: 32px;
+  text-align: left;
+}
+
+.ending-stats {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  margin-bottom: 32px;
+}
+
+.ending-stat {
+  text-align: center;
+  font-family: 'Share Tech Mono', monospace;
+}
+.ending-stat-val { font-size: 24px; color: var(--amber); }
+.ending-stat-label { font-size: 10px; color: var(--muted); margin-top: 4px; letter-spacing: 2px; }
+
+.restart-btn {
+  background: transparent;
+  border: 1px solid var(--mid);
+  color: var(--mid);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 4px;
+  padding: 12px 36px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+}
+.restart-btn:hover { border-color: var(--text); color: var(--text); }
+
+/* ── ANIMATIONS ── */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+@keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.2; } }
+@keyframes charge { 0%,100% { background: rgba(204,136,51,0.1); } 50% { background: rgba(204,136,51,0.4); } }
+@keyframes slideIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+@keyframes entityAttack { 0% { transform: scale(1); } 50% { transform: scale(1.3); opacity: 0.6; } 100% { transform: scale(1); } }
+
+.scene-area { animation: fadeIn 0.3s ease; }
+.shake { animation: shake 0.3s ease; }
+
+/* scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--panel); }
+::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- ══════════════ TITLE SCREEN ══════════════ -->
+<div id="title-screen" class="screen active">
+  <div class="noise-bg"></div>
+  <div class="scan-lines"></div>
+  <div class="title-content">
+    <div class="title-label">실험 구역 B — 분류 불명</div>
+    <h1 class="title-main">지하실</h1>
+    <div class="title-sub">THE BASEMENT — EXPERIMENT LOG</div>
+    <button class="title-btn" onclick="startGame()">▶ 시작하기</button>
+    <div class="title-warning">
+      이 실험에는 참여 동의가 필요하지 않습니다.<br>
+      생존 여부는 본인의 선택에 달려 있습니다.<br>
+      — 교장 P
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ GAME SCREEN ══════════════ -->
+<div id="game-screen" class="screen">
+  <div class="game-header">
+    <div class="header-day" id="hdr-day">DAY 0</div>
+    <div class="header-tp">TP: <span id="hdr-tp">0</span></div>
+    <div class="header-students">생존: <span id="hdr-alive">12</span>/12</div>
+    <div id="hdr-flags" style="display:flex;gap:8px;margin-left:auto;margin-right:16px;"></div>
+    <div class="header-title">지하실 — 실험 구역 B</div>
+  </div>
+
+  <div class="game-body">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">생존자 현황</div>
+        <div class="student-list" id="student-list"></div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">보유 아이템</div>
+        <div class="item-list" id="item-list"></div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">플래그</div>
+        <div class="flag-list" id="flag-list"></div>
+      </div>
+    </div>
+
+    <!-- Main -->
+    <div class="main-panel">
+      <div class="scene-area" id="scene-area"></div>
+      <div class="choices-area" id="choices-area"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ BATTLE SCREEN ══════════════ -->
+<div id="battle-screen" class="screen">
+  <div class="battle-header">
+    <div class="battle-day-label" id="battle-day">DAY 91 — 초기 압박</div>
+    <div class="battle-status">
+      <div class="battle-stat">벽: <span id="b-wall">100</span>%</div>
+      <div class="battle-stat">공기: <span id="b-air">100</span>%</div>
+      <div class="battle-stat">생존: <span id="b-alive">12</span>/12</div>
+      <div class="battle-stat">환풍L: <span id="b-ventL" style="color:var(--green-bright)">ON</span></div>
+      <div class="battle-stat">환풍R: <span id="b-ventR" style="color:var(--green-bright)">ON</span></div>
+      <div class="battle-stat">전압: <span id="b-voltage">대기</span></div>
+    </div>
+  </div>
+
+  <div class="battle-body">
+    <div class="battle-arena" id="battle-arena">
+      <canvas id="battle-canvas"></canvas>
+      <div class="arena-hud">
+        <div class="broadcast-alert" id="broadcast-alert">⚡ 방송 노이즈! 전압 장치로 이동!</div>
+      </div>
+      <div class="controls-hint">
+        WASD / 방향키 — 이동<br>
+        수리포인트(L1~B4) 접근 — 자동 수리<br>
+        환풍구(환풍L/R) 접근 — 자동 재기동<br>
+        전압장치(⚡전압) 접근 — 방송 교란<br>
+        ※ 노이즈 발생 시 10초 내 전압장치로!
+      </div>
+    </div>
+
+    <!-- Battle sidebar -->
+    <div class="battle-log">
+      <div class="battle-log-header">전투 로그</div>
+      <div class="battle-log-entries" id="battle-log-entries"></div>
+      <div class="wave-progress">
+        <span id="wave-label">웨이브 진행</span>
+        <div class="wave-bar"><div class="wave-fill" id="wave-fill" style="width:0%"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ ENDING SCREEN ══════════════ -->
+<div id="ending-screen" class="screen">
+  <div class="noise-bg"></div>
+  <div class="ending-content" id="ending-content"></div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+//  GAME STATE
+// ════════════════════════════════════════════════════════════════
+const G = {
+  day: 0,
+  tp: 0,
+  ateFood: false,      // 배급 섭취 여부
+  flags: {
+    planKnown: false,    // 계획 인지
+    itemsReady: false,   // 아이템 준비
+    maruMet: false,      // 김마루 접촉
+    allSurvive: true,    // 전원 생존
+    truePath: false,     // 진엔딩 경로
+    day50Stay: false,    // 50일 잔류
+  },
+  items: { metal: 0, cable: 0, water: 0 },
+  students: [
+    { id:'주인공', name:'주인공', status:'alive' },
+    { id:'사회', name:'사회문화 엘리트', status:'alive' },
+    { id:'예체', name:'예체능 엘리트', status:'alive' },
+    { id:'생명', name:'생명과학 엘리트', status:'alive' },
+    { id:'수학', name:'수학 엘리트', status:'alive' },
+    { id:'물리', name:'물리 엘리트', status:'alive' },
+    { id:'화학', name:'화학 엘리트', status:'alive' },
+    { id:'국어', name:'국어 엘리트', status:'alive' },
+    { id:'역사', name:'역사 엘리트', status:'alive' },
+    { id:'정보', name:'정보 엘리트', status:'alive' },
+    { id:'윤리', name:'윤리 엘리트', status:'alive' },
+    { id:'외국어', name:'외국어 엘리트', status:'alive' },
+  ],
+  // Battle state
+  battle: {
+    day: 93,
+    phase: 0,
+    wallHP: { L1:100,L2:100,R1:100,R2:100,B1:100,B2:100,B3:100,B4:100 },
+    airQuality: 100,
+    ventL: true,
+    ventR: true,
+    broadcastActive: false,
+    broadcastTimer: 0,
+    voltageUsed: [false,false,false],
+    waveProgress: 0,
+    entities: [],
+    entityId: 0,
+    interval: null,
+    waveComplete: false,
+    voltageCharging: false,
+  },
+  voltage93Used: false,
+  voltage96Used: false,
+  voltage99Used: false,
+};
+
+function aliveCount() { return G.students.filter(s=>s.status==='alive').length; }
+function killStudent(id, reason) {
+  const s = G.students.find(s=>s.id===id);
+  if(!s || s.status!=='alive') return;
+  s.status = 'dead';
+  if(id==='사회') G.tp += 5;
+  else if(id==='예체') { s.status='infected'; G.tp += 3; }
+  else G.tp += 1;
+  G.flags.allSurvive = false;
+  updateSidebar();
+  updateHeader();
+}
+function addTP(n) { G.tp += n; updateHeader(); }
+function addItem(t,n=1) { G.items[t] = Math.min(3, G.items[t]+n); updateSidebar(); }
+function setFlag(k,v=true) { G.flags[k]=v; updateSidebar(); }
+
+// ════════════════════════════════════════════════════════════════
+//  UI HELPERS
+// ════════════════════════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function updateHeader() {
+  document.getElementById('hdr-day').textContent = `DAY ${G.day}`;
+  document.getElementById('hdr-tp').textContent = G.tp;
+  document.getElementById('hdr-alive').textContent = aliveCount();
+
+  const fc = document.getElementById('hdr-flags');
+  fc.innerHTML = '';
+  if(G.flags.planKnown) fc.innerHTML += `<span style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--green-bright);letter-spacing:1px">계획인지</span>`;
+  if(G.flags.maruMet) fc.innerHTML += `<span style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--purple-bright);letter-spacing:1px">마루접촉</span>`;
+  if(G.flags.itemsReady) fc.innerHTML += `<span style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--amber-bright);letter-spacing:1px">아이템준비</span>`;
+}
+
+function updateSidebar() {
+  // students
+  const sl = document.getElementById('student-list');
+  sl.innerHTML = G.students.map(s=>`
+    <div class="student-item ${s.status}">
+      <div class="student-dot"></div>
+      <span style="font-size:11px">${s.name}</span>
+    </div>`).join('');
+
+  // items
+  const il = document.getElementById('item-list');
+  il.innerHTML = [
+    ['metal','금속 물체'],['cable','도체 케이블'],['water','물']
+  ].map(([k,n])=>`
+    <div class="item-entry">
+      <span>${n}</span>
+      <span class="item-count">${G.items[k]}/3</span>
+    </div>`).join('');
+
+  // flags
+  const flagDefs = [
+    ['planKnown','배급 위험 인지'],
+    ['itemsReady','전압 아이템 준비'],
+    ['maruMet','김마루 접촉'],
+    ['allSurvive','전원 생존 유지'],
+    ['day50Stay','50일 잔류 선택'],
+  ];
+  const fl = document.getElementById('flag-list');
+  fl.innerHTML = flagDefs.map(([k,n])=>`
+    <div class="flag-entry ${G.flags[k]?'on':'off'}">${G.flags[k]?'✓':' '} ${n}</div>`).join('');
+}
+
+function renderScene(dayLabel, title, html, choices) {
+  updateHeader();
+  updateSidebar();
+  document.getElementById('scene-area').innerHTML = `
+    <div class="scene-day-label">${dayLabel}</div>
+    <div class="scene-title">${title}</div>
+    <div class="scene-text">${html}</div>`;
+  
+  const ca = document.getElementById('choices-area');
+  ca.innerHTML = choices.map((c,i)=>`
+    <button class="choice-btn ${c.cls||''}" onclick="(${c.fn})()">${c.text}</button>`).join('');
+}
+
+function addSceneExtra(html) {
+  document.getElementById('scene-area').innerHTML += html;
+}
+
+// ════════════════════════════════════════════════════════════════
+//  GAME START
+// ════════════════════════════════════════════════════════════════
+function startGame() {
+  showScreen('game-screen');
+  sceneProlog();
+}
+
+// ════════════════════════════════════════════════════════════════
+//  SCENES
+// ════════════════════════════════════════════════════════════════
+
+function sceneProlog() {
+  G.day = 0;
+  renderScene('프롤로그 — DAY 0', '평범한 점심시간',
+  `<p>오늘도 급식실은 시끄럽다. 식판을 들고 줄을 서는 학생들, 이미 자리에 앉아 수다를 떠는 무리들. 당신은 식판을 들고 자리를 찾던 중이었다.</p>
+  <p>그때 급식실 반대편에서 비명이 터졌다.</p>
+  <p>처음에는 단순한 다툼처럼 보였다. 그러나 사람들이 물러나며 공간이 생기자 — 그 가운데 있던 것이 보였다. 피부가 녹아내리고, 관절이 뒤틀린 채 움직이는 <strong style="color:var(--red)">무언가</strong>.</p>
+  <div class="scene-alert">⚠ 9화 현상 최초 발생 확인 — 급식실 전역 확산 중</div>
+  <p>패닉이 퍼졌다. 출구 쪽에서도 비명. 급식을 먹던 학생들 중 일부가 갑자기 쓰러지기 시작한다.</p>
+  <p>당신은 달린다. 복도로 나오자 — 평소 출입 금지였던 계단 아래 공간이 열려 있다. 쇠창살이 파손된 상태. 내려가는 좁은 계단이 드러나 있다.</p>
+  <div class="scene-atmosphere">발소리가 가까워진다. 위층에서. 빠르다.</div>`,
+  [
+    { text:'계단 아래로 내려간다', fn:'scene01_descend' },
+    { text:'다른 출구를 찾는다', cls:'danger', fn:'scene01_other' },
+  ]);
+}
+
+function scene01_other() {
+  renderScene('DAY 0', '막힌 출구',
+  `<p>당신은 다른 출구를 찾아 복도를 달린다. 그러나 정문도, 비상구도 이미 9 개체들로 막혀 있다.</p>
+  <p>뒤에서 빠른 발소리. 결국 당신은 계단 아래로 뛰어들 수밖에 없었다.</p>`,
+  [{ text:'계단 아래로 내려간다', fn:'scene01_descend' }]);
+}
+
+function scene01_descend() {
+  renderScene('DAY 0', '지하실',
+  `<p>계단 아래는 어둡고 차갑다. 외부의 비명 소리가 점점 멀어진다.</p>
+  <p>공간이 비정상적으로 정돈되어 있다. 오래된 폐공간이 아니다 — 벽면의 조명, 철제 문, 바닥의 이동 흔적. 최근까지 사용된 시설이다.</p>
+  <p>뒤를 돌아보는 순간 — 어둠 속에서 누군가가 움직인다.</p>
+  <div class="scene-atmosphere">시야가 흔들린다. 의식이 흐릿해진다. 마지막으로 보이는 것은 — 차분한 표정으로 상황을 관찰하는 교장 P의 모습.</div>
+  <p>저항할 틈도 없이 의식을 잃는다.</p>
+  <div class="scene-alert">⚡ 의식 소실 — 수감 시설로 이송됨</div>`,
+  [{ text:'의식을 되찾다 (DAY 1)', fn:'scene_day1' }]);
+}
+
+function scene_day1() {
+  G.day = 1;
+  renderScene('DAY 1 — 수감 첫날', '12명의 생존자',
+  `<p>눈을 떴을 때 당신은 철제 구조물로 된 수감 시설 안에 있었다. 주변에는 같은 상황에 빠진 학생들이 있다 — 총 11명. 모두 합쳐 12명.</p>
+  <p>공간은 외부와 완전히 차단되어 있고, 출구는 잠겨 있다. 벽 너머에서 금속 문이 닫히는 소리가 들린다.</p>
+  <div class="scene-info">📋 생존자: 당신을 포함해 12명 / 등급 미분류 상태</div>
+  <p><strong style="color:var(--amber)">사회문화 엘리트</strong>가 벽 구석에 웅크려 있다. 극도로 불안한 상태다. 먼저 말을 걸어야 할 것 같다.</p>
+  <p><strong style="color:var(--text)">생명과학 엘리트</strong>는 조용히 공간을 둘러보며 무언가를 분석하고 있다. "이 공간... 오래된 게 아니에요."</p>`,
+  [
+    { text:'사회문화 엘리트에게 말을 건다 (안정시키기)', fn:'scene_calm_social' },
+    { text:'생명과학 엘리트와 대화한다 (정보 수집)', fn:'scene_info_bio' },
+    { text:'공간을 직접 탐색한다', fn:'scene_explore_d1' },
+  ]);
+}
+
+function scene_calm_social() {
+  renderScene('DAY 1', '사회문화 엘리트',
+  `<p>"괜찮아? 일단 진정해."</p>
+  <p>그는 고개를 들었지만 눈에 공포가 가득하다. "이게 무슨 상황이에요... 우리 다 죽는 거 아니에요?"</p>
+  <p>당신은 그 옆에 앉아 오래 이야기를 나눈다. 급식실에서 있었던 일, 이 공간의 특이점, 살아남기 위해서는 침착함이 필요하다는 것.</p>
+  <div class="scene-info">✓ 사회문화 엘리트 안정화 성공 — 자살 시도 위험 감소</div>
+  <p>그가 조금씩 고개를 끄덕인다. "...알겠어요. 같이 살아남아 봐요."</p>`,
+  [
+    { text:'생명과학 엘리트와 대화하러 간다', fn:'scene_info_bio' },
+    { text:'다음 날로 넘어간다', fn:'scene_day2_ration' },
+  ]);
+}
+
+function scene_info_bio() {
+  renderScene('DAY 1', '생명과학 엘리트의 분석',
+  `<p>"저는 이 시설의 공기를 분석하고 있었어요." 생명과학 엘리트가 조심스럽게 말한다. "환기 시스템이 작동하고 있어요. 누군가 이 공간을 최근까지 관리했다는 뜻이죠."</p>
+  <p>그가 벽의 배관을 가리킨다. "그리고 저기 — 오래된 연구 시설 특유의 구조예요. 이건 갑자기 만든 게 아니에요."</p>
+  <p>"그보다..." 그가 목소리를 낮춘다. "오늘 급식실에서 9화된 학생들... 급식을 먹은 학생들이었어요. 혹시 급식에 뭔가 들어있었던 건 아닐까요?"</p>
+  <div class="scene-alert">🔍 단서: 9화와 급식 사이의 연관성 — 아직 미확인</div>`,
+  [
+    { text:'"그 가능성에 대해 더 이야기해봐요" — 계속 분석한다', fn:'scene_food_analysis' },
+    { text:'다른 학생들과도 대화하러 간다', fn:'scene_day2_ration' },
+  ]);
+}
+
+function scene_food_analysis() {
+  renderScene('DAY 2', '배급 첫 지급',
+  `<p>다음 날 아침. 철제 문이 열리며 배급이 들어온다. 포장된 식량과 물.</p>
+  <p><strong style="color:var(--amber-bright)">예체능 엘리트</strong>가 벌떡 일어난다. "됐다! 먹자. 체력 유지가 먼저야."</p>
+  <p><strong style="color:var(--text)">생명과학 엘리트</strong>가 조용히 손을 들어 막는다. "잠깐요. 어제 이야기한 거 기억해요? 급식실에서—"</p>
+  <p>"그거 그냥 사고잖아!" 예체능 엘리트가 반박한다. "배가 고파서 판단력이 흐려지는 게 더 위험해."</p>
+  <p><strong style="color:var(--mid)">윤리 엘리트</strong>가 끼어든다. "먹지 않으면 더 빨리 쓰러지잖아요. 그게 더 비윤리적인 선택 아닌가요?"</p>
+  <div class="scene-atmosphere">12명의 눈이 당신을 향한다. 당신의 결정을 기다리고 있다.</div>`,
+  [
+    { text:'배급을 먹지 말자고 설득한다 — 위험하다고 경고', fn:'scene_refuse_food' },
+    { text:'일단 먹는다 — 지금 당장 굶을 수는 없다', cls:'danger', fn:'scene_eat_food' },
+    { text:'배급을 몰래 버린다 — 먹는 척하면서', fn:'scene_hide_refuse' },
+  ]);
+}
+
+function scene_refuse_food() {
+  G.flags.planKnown = true;
+  renderScene('DAY 2', '배급 거부',
+  `<p>"급식실에서 9화는 밥을 먹은 직후에 발생했어요." 당신은 모두를 향해 말한다. "이게 우연일 수 없어요. 배급도 같은 거예요."</p>
+  <p>방 안이 조용해진다.</p>
+  <p>예체능 엘리트는 여전히 의심스럽다는 표정이지만, 생명과학 엘리트가 고개를 끄덕인다. "저도 그렇게 생각해요. 증거는 없지만... 지금은 조심하는 게 맞아요."</p>
+  <p>대부분의 학생들이 배급을 멀리한다. 다만 예체능 엘리트는 여전히 망설이는 표정이다.</p>
+  <div class="scene-info">✓ 계획 인지 플래그 활성화 — 배급 위험성 인식</div>`,
+  [
+    { text:'예체능 엘리트를 계속 설득한다', fn:'scene_convince_sports' },
+    { text:'일단 여기서 넘어간다 (DAY 3~7)', fn:'scene_early_explore' },
+  ]);
+}
+
+function scene_eat_food() {
+  G.ateFood = true;
+  addTP(1);
+  renderScene('DAY 2', '배급 섭취',
+  `<p>당신은 배급을 먹는다. 맛은 평범하다. 다른 학생들도 대부분 먹는다.</p>
+  <p>생명과학 엘리트만 혼자 먹지 않고 조심스러운 눈빛으로 주위를 살핀다.</p>
+  <div class="scene-alert">⚠ 배급 섭취 — 체내 약물 축적 시작</div>
+  <p>며칠이 지나도 당장은 아무 이상이 없다. 어쩌면 생명과학 엘리트의 걱정이 기우였을지도 모른다.</p>`,
+  [{ text:'계속 버틴다 (DAY 3~7)', fn:'scene_early_explore' }]);
+}
+
+function scene_hide_refuse() {
+  G.flags.planKnown = true;
+  renderScene('DAY 2', '은밀한 거부',
+  `<p>당신은 먹는 척하면서 배급을 소매 속에 숨긴다. 나중에 화장실에서 버린다.</p>
+  <p>생명과학 엘리트가 당신을 관찰하더니 작게 고개를 끄덕인다. 그도 같은 생각을 하고 있었던 것 같다.</p>
+  <p>이후 며칠 동안 당신은 이 패턴을 반복한다. 주변 학생들도 서서히 눈치채며 동참하기 시작한다.</p>
+  <div class="scene-info">✓ 배급 미섭취 유지 — 계획 인지 플래그 활성화</div>`,
+  [{ text:'계속 버틴다 (DAY 3~7)', fn:'scene_early_explore' }]);
+}
+
+function scene_convince_sports() {
+  renderScene('DAY 3', '예체능 엘리트 설득',
+  `<p>"들어봐. 네가 지금 당장 배고픔을 참는 건 힘들어. 하지만 저 배급을 먹었다가 급식실처럼 되면—"</p>
+  <p>예체능 엘리트가 당신의 말을 잘랐다. "그게 확실해?"</p>
+  <p>"확실하지 않아. 하지만 위험을 감수할 필요는 없잖아."</p>
+  <p>그가 오래 생각하더니 배급을 내려놓는다. "...알겠어. 믿어볼게."</p>
+  <div class="scene-info">✓ 예체능 엘리트 설득 성공 — 9화 위험 제거</div>`,
+  [{ text:'DAY 3~7 탐색으로 넘어간다', fn:'scene_early_explore' }]);
+}
+
+function scene_early_explore() {
+  G.day = 7;
+  renderScene('DAY 3~7', '제한된 탐색',
+  `<p>며칠이 지나며 지하실 일부 구역 접근이 허용된다. 학생들은 조금씩 공간을 탐색하기 시작한다.</p>
+  <p><strong style="color:var(--text)">물리 엘리트</strong>가 벽의 배관 구조를 분석한다. "전압 장치가 있어요. 아주 강한 전파를 방출할 수 있는 구조예요."</p>
+  <p><strong style="color:var(--text)">화학 엘리트</strong>가 환풍구를 살핀다. "이 환풍구... 외부 공기와 연결되어 있어요. 공기 공급이 여기에 달렸어요."</p>
+  <p><strong style="color:var(--text)">정보 엘리트</strong>가 벽의 케이블을 발견한다. "이거... 방송 장비에 연결된 선이에요."</p>
+  <div class="scene-info">🔍 탐색 가능: 아이템 수집 또는 탈출 경로 탐색</div>`,
+  [
+    { text:'아이템을 수집한다 (금속/케이블/물)', fn:'scene_collect_items' },
+    { text:'탈출 경로를 탐색한다 — 혼자라도 나갈 방법', fn:'scene_early_escape_route' },
+    { text:'더 깊이 탐색해서 정보를 모은다', fn:'scene_info_gather' },
+  ]);
+}
+
+function scene_collect_items() {
+  addItem('metal',1); addItem('cable',1); addItem('water',1);
+  renderScene('DAY 7~15', '아이템 수집',
+  `<p>당신과 물리 엘리트는 사용 가능한 물건들을 모은다.</p>
+  <p>금속 트레이 파편, 끊어진 케이블 조각, 물이 담긴 용기.</p>
+  <div class="scene-info">✓ 금속 물체 1개, 도체 케이블 1개, 물 1개 획득</div>
+  <p>화학 엘리트가 가스 이벤트에 대해 경고한다. "외부에서 가스를 살포하면 환풍구가 작동해야만 살 수 있어요."</p>`,
+  [
+    { text:'더 많은 아이템을 수집한다', fn:'scene_collect_more' },
+    { text:'탈출 경로를 탐색한다', fn:'scene_early_escape_route' },
+    { text:'DAY 49 탈출 시도', fn:'scene_day49_escape' },
+  ]);
+}
+
+function scene_collect_more() {
+  addItem('metal',1); addItem('cable',1); addItem('water',1);
+  addItem('metal',1); addItem('cable',1); addItem('water',1);
+  G.flags.itemsReady = true;
+  renderScene('DAY 15~40', '완전한 준비',
+  `<p>당신은 탐색 가능한 모든 구역을 돌며 아이템을 최대한 확보한다.</p>
+  <div class="scene-info">✓ 금속 물체 3개, 도체 케이블 3개, 물 3개 — 최대 확보 완료</div>
+  <p>역사 엘리트가 P의 행동 패턴을 분석한다. "과거 독재자들의 선별 방식과 일치해요. 50일을 기점으로 뭔가 큰 변화가 있을 것 같아요."</p>
+  <p>외국어 엘리트가 조심스럽게 말한다. "...저 밖에 나가는 방법은 없을까요? 이대로 계속 있기엔 너무 위험해요."</p>`,
+  [
+    { text:'DAY 49 탈출 시도 — 지금 나갈 방법을 찾는다', fn:'scene_day49_escape' },
+    { text:'50일까지 기다린다 — 더 알아봐야 한다', fn:'scene_day50_event' },
+  ]);
+}
+
+function scene_info_gather() {
+  renderScene('DAY 10~30', '진실 수집',
+  `<p>국어 엘리트는 벽의 낙서와 이전 실험 대상들의 흔적을 기록하기 시작한다. "여기서 우리가 처음이 아니에요."</p>
+  <p>역사 엘리트가 지하실 구조를 분석한다. "이 선별 방식은... P는 그냥 가두는 게 목적이 아니에요. 살아남을 사람을 고르는 거예요."</p>
+  <p>생명과학 엘리트가 확신에 차서 말한다. "배급 확인했어요. 약물 성분이 포함된 게 맞아요."</p>
+  <div class="scene-info">🔍 P의 목적 파악 진행 중 — 인간 선별 실험</div>`,
+  [
+    { text:'아이템 수집을 시작한다', fn:'scene_collect_items' },
+    { text:'DAY 49 탈출을 시도한다', fn:'scene_day49_escape' },
+  ]);
+}
+
+function scene_early_escape_route() {
+  renderScene('DAY 20~40', '탈출 경로 발견',
+  `<p>당신은 제한된 탐색 시간을 이용해 지하실 구석을 뒤진다. 그리고 발견한다 — 사서가 공간 변형을 완전히 적용하기 전, 아직 존재하는 좁은 통로를.</p>
+  <p>혼자서만 통과할 수 있는 구조다. 다른 학생들을 데리고 갈 수 없다.</p>
+  <div class="scene-alert">⚠ 경고: 이 탈출은 단독 탈출입니다. 나머지 11명은 지하실에 남겨집니다.</div>
+  <p>당신은 지금 탈출할 수도 있고, 이 정보를 기억해두고 나중에 결정할 수도 있다.</p>`,
+  [
+    { text:'지금 탈출한다 — 혼자라도 살아야 한다', fn:'scene_day49_escape' },
+    { text:'탈출을 보류한다 — 더 알아봐야 한다', fn:'scene_collect_items' },
+  ]);
+}
+
+function scene_day49_escape() {
+  G.day = 49;
+  renderScene('DAY 49 — 조기 탈출', '탈출의 기로',
+  `<p>당신은 탈출 통로 앞에 서 있다. 좁고 어둡지만, 지하실 외부로 이어진다는 걸 알고 있다.</p>
+  <p>뒤를 돌아보면 — 11명의 학생들이 아직 수감 구역에 있다.</p>
+  <div class="scene-alert">⚠ 이 탈출은 혼자만 가능합니다. 다른 학생들을 구할 수 없습니다.</div>
+  ${G.ateFood ? '<div class="scene-alert">⚠ 당신은 배급을 섭취한 상태입니다.</div>' : '<div class="scene-info">✓ 당신은 배급을 섭취하지 않았습니다.</div>'}`,
+  [
+    { text:'탈출한다 — 지금 당장 나간다', cls:'danger', fn: G.ateFood ? 'ending_bad_escape49' : 'ending_normal_escape49' },
+    { text:'탈출하지 않는다 — 지하실에 남는다', fn:'scene_day50_event' },
+  ]);
+}
+
+// ═══ DAY 50 ═══
+function scene_day50_event() {
+  G.day = 50;
+  renderScene('DAY 50 — 연구 종료', '무언가가 변했다',
+  `<p>50일째 아침. 지하실 전체에 방송이 울린다.</p>
+  <blockquote style="border-left:2px solid var(--red);padding:8px 16px;margin:16px 0;font-size:13px;color:var(--mid);font-family:'Share Tech Mono',monospace">"1단계 연구 완료. 선별 대상 확인. 이후 일정에 따라 진행합니다."</blockquote>
+  <p>배급이 변했다. 이전과 달리 냄새가 다르고, 색도 조금 다르다. 생명과학 엘리트가 조심스럽게 확인한다. "이건... 정상 식량이에요. 약물이 없어요."</p>
+  <p>감시가 줄었다. 일부 봉쇄 구역의 문이 열렸다. 지하실 어딘가에서 빠져나갈 수 있는 경로가 생겼다.</p>
+  <div class="scene-info">🚪 탈출 경로 개방 — 조건 없이 나갈 수 있습니다</div>`,
+  [
+    { text:'지금 탈출한다 — 이 기회를 놓칠 수 없다', fn: G.ateFood ? 'ending_bad_escape50' : 'ending_normal_escape50' },
+    { text:'탈출하지 않는다 — 진실을 알아야 한다', fn:'scene_day51_stay' },
+  ]);
+}
+
+// ═══ DAY 51~89 ═══
+function scene_day51_stay() {
+  G.day = 51;
+  G.flags.day50Stay = true;
+  renderScene('DAY 51 — 준비 단계', '지하실에 남다',
+  `<p>당신은 탈출 기회를 포기했다. 다른 학생들도 당신을 따라 남기로 했다.</p>
+  <p>이후 지하실은 변했다. 배급은 정상 식량으로 바뀌었고, 일부 구역이 추가로 개방되었다.</p>
+  <p>그러나 이 안정은 일시적이라는 걸 모두 느끼고 있다.</p>
+  <div class="scene-atmosphere">역사 엘리트: "91일부터 뭔가 큰일이 날 것 같아요. 지금 준비해야 해요."</div>
+  <p>정보 엘리트가 방송 시스템을 분석하기 시작한다. "방송으로 9 개체를 통제하는 사람이 있어요. 이 방송을 막을 수 있으면..."</p>`,
+  [
+    { text:'"P의 서재를 찾아야 한다" — 깊은 탐색', fn:'scene_explore_library' },
+    { text:'"김마루를 찾아야 한다" — 사도 접촉', fn: G.tp <= 4 ? 'scene_maru_contact' : 'scene_maru_fail' },
+    { text:'아이템 추가 수집에 집중한다', fn:'scene_collect_51_89' },
+  ]);
+}
+
+function scene_maru_fail() {
+  renderScene('DAY 60', '접촉 실패',
+  `<p>어둠 속에서 무언가의 기척을 느꼈지만 — 모습을 드러내지 않는다.</p>
+  <div class="scene-alert">⚠ TP가 너무 높습니다. 김마루가 당신을 신뢰하지 않습니다.</div>
+  <p>멀리서 관찰하는 눈빛이 느껴지다가 사라진다.</p>`,
+  [{ text:'계속 준비한다', fn:'scene_collect_51_89' }]);
+}
+
+function scene_maru_contact() {
+  G.flags.maruMet = true;
+  renderScene('DAY 65', '김마루',
+  `<p>탐색 중 어두운 통로에서 그가 나타났다.</p>
+  <p>"...넌 다르네." 낮은 목소리. "지금까지 살아남은 것도, 배급을 안 먹은 것도. 너 같은 사람을 기다렸어."</p>
+  <p>그는 주위를 경계하며 빠르게 말했다.</p>
+  <p>"P의 계획은 지하실로 끝나지 않아. 91일부터 외부 세계 정복이 시작돼. 9 개체가 대량 투입되고, 진행자가 방송으로 통제해. 그 방송을 막아야 해."</p>
+  <p>"환풍구 두 개를 반드시 유지해. 가스가 들어온다. 그리고 전압 장치 — 93일, 96일, 99일 방송 직전에 써. 10초 안에."</p>
+  <div class="scene-info">✓ 김마루 접촉 완료 — 전투 전략 입수</div>
+  <p>"나는... 내가 해야 할 일이 있어." 그가 돌아섰다. "살아남아."</p>`,
+  [{ text:'계속 준비한다 (DAY 66~89)', fn:'scene_collect_51_89' }]);
+}
+
+function scene_explore_library() {
+  renderScene('DAY 70~80', 'P의 서재',
+  `<p>깊은 탐색 끝에 P의 서재에 도달했다. 그러나 그곳에는 사서가 있었다.</p>
+  <p>공간이 뒤틀리기 시작한다. 벽이 이동하고 통로가 변형된다.</p>
+  <div class="scene-alert">⚡ 보스전: 사서 — 공간 변형 능력 사용 중</div>
+  <p>당신은 변형되는 공간 속에서 가까스로 버텼다. 서재에서 확인한 내용:</p>
+  <div class="scene-info">📖 P의 계획: 100일 세계 정복. 91~99일 대학살. 생존자만이 신세계 주민이 된다.</div>
+  <p>이것이 진실이었다. 지하실은 시험장이고, 외부 세계 전체가 다음 무대이다.</p>`,
+  [
+    { text:'김마루를 찾는다', fn: G.tp <= 4 ? 'scene_maru_contact' : 'scene_maru_fail' },
+    { text:'DAY 89 — 최종 준비 완료', fn:'scene_day89_final' },
+  ]);
+}
+
+function scene_collect_51_89() {
+  if(G.items.metal < 3) { addItem('metal',1); addItem('cable',1); addItem('water',1); }
+  G.flags.itemsReady = (G.items.metal >= 1 && G.items.cable >= 1 && G.items.water >= 1);
+  renderScene('DAY 66~89', '준비',
+  `<p>남은 시간 동안 아이템을 최대한 확보하고, 학생들과 생존 전략을 세운다.</p>
+  <div class="scene-info">현재 아이템: 금속 ${G.items.metal}/3개, 케이블 ${G.items.cable}/3개, 물 ${G.items.water}/3개</div>
+  <p>역사 엘리트가 말한다. "90일이 되면 모든 게 달라질 거예요. 지금 준비가 전부예요."</p>`,
+  [{ text:'DAY 89 — 최종 준비', fn:'scene_day89_final' }]);
+}
+
+function scene_day89_final() {
+  G.day = 89;
+  const ready = G.items.metal >= 1 && G.items.cable >= 1 && G.items.water >= 1;
+  if(ready) G.flags.itemsReady = true;
+  renderScene('DAY 89 — 최후의 밤', '내일이면 모든 것이 바뀐다',
+  `<p>89일 밤. 지하실이 이상하게 조용하다.</p>
+  <p>역사 엘리트가 조용히 말한다. "내일이에요. P가 뭔가 시작할 거예요."</p>
+  <p>모두가 잠들지 못하고 있다.</p>
+  <div class="scene-info">현재 상태: TP ${G.tp} / 생존 ${aliveCount()}명 / 아이템 M:${G.items.metal} C:${G.items.cable} W:${G.items.water}</div>
+  ${ready ? '<div class="scene-info">✓ 전압 방출 준비 완료</div>' : '<div class="scene-alert">⚠ 아이템 부족 — 방송 교란 횟수가 제한됩니다</div>'}`,
+  [{ text:'DAY 90을 맞이한다', fn:'scene_day90' }]);
+}
+
+// ═══ DAY 90 ═══
+function scene_day90() {
+  G.day = 90;
+  renderScene('DAY 90 — 선언', 'P의 목소리',
+  `<p>새벽, 지하실 전역에 방송이 울렸다. 그리고 그 너머로 — 외부 세계로도.</p>
+  <blockquote style="border-left:2px solid var(--red);padding:12px 16px;margin:16px 0;font-size:14px;color:var(--red-bright);font-family:'Share Tech Mono',monospace;line-height:1.8">"약한 인간은 제거되어야 합니다. 강한 인간만이 세계를 유지할 자격이 있습니다. 나는 이제 새로운 세계를 시작합니다. — 교장 P"</blockquote>
+  <p>동시에 지하실 전체가 흔들렸다. 9 개체들의 활동이 급격히 증가한다. 안전 구역이 사라지고 있다.</p>
+  <div class="scene-alert">⚠ DAY 90 — 탐색 불가 / 아이템 획득 불가 / 전투 시작 임박</div>
+  ${G.flags.maruMet ? '<div class="scene-info">김마루가 마지막으로 나타났다. "살아남아." 그리고 사라졌다.</div>' : ''}
+  <p>당신은 학생들을 집결시키고 바리케이트를 친다. 환풍구가 있는 이 공간을 마지막 거점으로 삼기로 했다.</p>
+  <p>91일이 시작되면 — 9 개체의 대규모 공격이 시작된다.</p>`,
+  [{ text:'DAY 91 — 생존 전쟁 시작', fn:'start_battle_91' }]);
+}
+
+// ════════════════════════════════════════════════════════════════
+//  BATTLE SYSTEM — WASD CHARACTER MOVEMENT
+// ════════════════════════════════════════════════════════════════
+
+const REPAIR_POINTS = ['L1','L2','R1','R2','B1','B2','B3','B4'];
+
+// ── Canvas battle state ──
+const BC = {
+  canvas:null, ctx:null, W:0, H:0,
+  animId:null, tickInterval:null, tickCount:0,
+  px:0, py:0, pSpeed:3.5, pSize:10,
+  keys:{},
+  entities:[], entityId:0,
+  wall:50,
+  objects:{},
+  interactRadius:36,
+  noiseActive:false, noiseTimer:0,
+  broadcastsFired:{ 93:false, 96:false, 99:false },
+  voltageCharging:false, voltageTimer:0,
+  day:91, waveProgress:0,
+  ventL:true, ventR:true,
+  airQuality:100,
+  wallHP:{},
+  gasTriggered:false,
+  broadcastTriggers:{ 93:30, 96:35, 99:30 },
+  ventStops:[], nextVentStop:0,
+};
+
+function initBattleCanvas() {
+  BC.canvas = document.getElementById('battle-canvas');
+  BC.ctx = BC.canvas.getContext('2d');
+  resizeBattleCanvas();
+  window.addEventListener('resize', resizeBattleCanvas);
+}
+function resizeBattleCanvas() {
+  const a = document.getElementById('battle-arena');
+  BC.W = a.clientWidth; BC.H = a.clientHeight;
+  BC.canvas.width = BC.W; BC.canvas.height = BC.H;
+  // Only recompute object positions (player position recomputed inside)
+  computeObjectPositions();
+}
+function computeObjectPositions() {
+  const w=BC.wall, W=BC.W, H=BC.H;
+  const ty = w + 24; // just inside playable area so player can reach
+  BC.objects = {
+    ventL:  {x:W*0.25, y:ty,       label:'환풍L', type:'ventL'},
+    voltage:{x:W*0.5,  y:ty,       label:'⚡전압', type:'voltage'},
+    ventR:  {x:W*0.75, y:ty,       label:'환풍R', type:'ventR'},
+    L1:{x:w+24, y:H*0.35,  label:'L1', type:'repair', pt:'L1'},
+    L2:{x:w+24, y:H*0.65,  label:'L2', type:'repair', pt:'L2'},
+    R1:{x:W-w-24, y:H*0.35, label:'R1', type:'repair', pt:'R1'},
+    R2:{x:W-w-24, y:H*0.65, label:'R2', type:'repair', pt:'R2'},
+    B1:{x:W*0.2, y:H-w-24, label:'B1', type:'repair', pt:'B1'},
+    B2:{x:W*0.4, y:H-w-24, label:'B2', type:'repair', pt:'B2'},
+    B3:{x:W*0.6, y:H-w-24, label:'B3', type:'repair', pt:'B3'},
+    B4:{x:W*0.8, y:H-w-24, label:'B4', type:'repair', pt:'B4'},
+  };
+  BC.px = W*0.5; BC.py = H*0.55;
+}
+
+function setupBattleInput(){
+  BC.keys={};
+  document.addEventListener('keydown',onBattleKey);
+  document.addEventListener('keyup',e=>{BC.keys[e.code]=false;});
+}
+function removeBattleInput(){document.removeEventListener('keydown',onBattleKey);}
+function onBattleKey(e){
+  BC.keys[e.code]=true;
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
+}
+
+function start_battle_91() {
+  G.day=91;
+  showScreen('battle-screen');
+  // Delay init slightly to let the DOM render and get proper dimensions
+  requestAnimationFrame(()=>{
+    initBattleCanvas();
+    setupBattleInput();
+    initBattleState(91);
+    addBattleLog('system','DAY 91 — 생존 전쟁 시작');
+    addBattleLog('warning','WASD / 방향키로 이동');
+    addBattleLog('info','수리포인트·환풍구·전압장치에 접근하면 자동 상호작용');
+    addBattleLog('info','9 개체와 충돌하면 벽이 손상된다!');
+    startBattleRender();
+    startBattleLogic();
+  });
+}
+
+function initBattleState(day) {
+  BC.day=day; BC.waveProgress=0;
+  BC.wallHP={}; REPAIR_POINTS.forEach(p=>BC.wallHP[p]=100);
+  BC.airQuality=100; BC.ventL=true; BC.ventR=true;
+  BC.noiseActive=false; BC.noiseTimer=0;
+  BC.voltageCharging=false; BC.voltageTimer=0;
+  BC.entities=[]; BC.entityId=0; BC.tickCount=0;
+  BC.gasTriggered=false;
+  // Reset player to center
+  if(BC.W && BC.H){ BC.px=BC.W*0.5; BC.py=BC.H*0.55; }
+  // Reset interaction cooldowns
+  for(const k in _icd) delete _icd[k];
+  _entityHitCd=0;
+  scheduleVentStops(day);
+  BC.nextVentStop=0;
+  document.getElementById('wave-fill').style.width='0%';
+  updateBattleUI();
+}
+
+function scheduleVentStops(day) {
+  if(day<=92)      BC.ventStops=[{p:30,s:'L'},{p:60,s:'R'}];
+  else if(day===93) BC.ventStops=[{p:18,s:'L'},{p:48,s:'R'},{p:72,s:'L'}];
+  else if(day<99)  BC.ventStops=[{p:12,s:'L'},{p:25,s:'R'},{p:45,s:'L'},{p:62,s:'R'},{p:78,s:'L'}];
+  else             BC.ventStops=[{p:5,s:'both'},{p:33,s:'L'},{p:50,s:'R'},{p:68,s:'both'},{p:85,s:'L'}];
+}
+
+function startBattleRender(){
+  if(BC.animId)cancelAnimationFrame(BC.animId);
+  function frame(){
+    updatePlayerMovement();
+    checkInteractions();
+    renderBattle();
+    BC.animId=requestAnimationFrame(frame);
+  }
+  BC.animId=requestAnimationFrame(frame);
+}
+function stopBattleRender(){if(BC.animId)cancelAnimationFrame(BC.animId);BC.animId=null;}
+
+function stopBattle() {
+  if(G.battle&&G.battle.interval){clearInterval(G.battle.interval);G.battle.interval=null;}
+  if(BC.tickInterval){clearInterval(BC.tickInterval);BC.tickInterval=null;}
+  stopBattleRender();
+  removeBattleInput();
+}
+
+function startBattleLogic(){
+  if(BC.tickInterval)clearInterval(BC.tickInterval);
+  BC.tickInterval=setInterval(doBattleTick,700);
+}
+
+function doBattleTick(){
+  BC.tickCount++;
+  const day=BC.day;
+
+  // Wave progress
+  const rate=day>=99?3.5:day>=96?2.2:1.4;
+  BC.waveProgress=Math.min(100,BC.waveProgress+rate);
+  document.getElementById('wave-fill').style.width=BC.waveProgress+'%';
+
+  // Wall damage
+  const dmg=day>=99?7:day>=96?4.5:2.5;
+  REPAIR_POINTS.forEach(p=>{if(Math.random()<0.28)BC.wallHP[p]=Math.max(0,BC.wallHP[p]-dmg);});
+
+  // Air quality
+  if(!BC.ventL||!BC.ventR){
+    BC.airQuality=Math.max(0,BC.airQuality-((!BC.ventL&&!BC.ventR)?9:3.5));
+  }else if(BC.airQuality<100){BC.airQuality=Math.min(100,BC.airQuality+2);}
+
+  // Vent stops by schedule
+  if(BC.nextVentStop<BC.ventStops.length){
+    const vs=BC.ventStops[BC.nextVentStop];
+    if(BC.waveProgress>=vs.p){
+      BC.nextVentStop++;
+      if(vs.s==='both'||vs.s==='L'){BC.ventL=false;addBattleLog('warning','좌측 환풍구 정지! 접촉하여 재기동!');}
+      if(vs.s==='both'||vs.s==='R'){BC.ventR=false;addBattleLog('warning','우측 환풍구 정지! 접촉하여 재기동!');}
+    }
+  }
+
+  // Broadcast noise (93일: 30%, 96일: 35%, 99일: 30% 도달 시 1회 발동)
+  if(day>=93&&!BC.noiseActive&&!BC.voltageCharging){
+    const trig=BC.broadcastTriggers[day]||30;
+    if(!BC.broadcastsFired[day]&&BC.waveProgress>=trig){
+      BC.broadcastsFired[day]=true;
+      BC.noiseActive=true;
+      BC.noiseTimer=13; // ~9초
+      addBattleLog('danger','⚡ 방송 노이즈! 전압 장치로 이동하라! (약 9초)');
+      showBroadcastAlert('noise');
+    }
+  }
+
+  // Noise countdown
+  if(BC.noiseActive&&BC.noiseTimer>0){
+    BC.noiseTimer--;
+    const sec=Math.ceil(BC.noiseTimer*0.7);
+    document.getElementById('b-voltage').textContent=`노이즈 ${sec}s`;
+    if(BC.noiseTimer<=0){BC.noiseActive=false;broadcastFail();}
+  }
+
+  // Voltage charge countdown
+  if(BC.voltageCharging){
+    BC.voltageTimer--;
+    if(BC.voltageTimer<=0){
+      BC.voltageCharging=false;
+      addBattleLog('success','⚡ 방출 성공! 방송 교란!');
+      addBattleLog('info','9 개체 활동 일시 감소...');
+      document.getElementById('b-voltage').textContent='방출완료';
+      hideBroadcastAlert();
+      updateSidebar();
+      setTimeout(()=>document.getElementById('b-voltage').textContent='대기',3000);
+    }
+  }
+
+  // Gas event (day 96 block, fires once at 50%)
+  if(day>=96&&!BC.gasTriggered&&BC.waveProgress>=50){
+    BC.gasTriggered=true;
+    addBattleLog('danger','화학가스 살포! 환풍구를 유지하라!');
+    if(!BC.ventL&&!BC.ventR){for(let i=0;i<2;i++)killStudentBattle();}
+    else if(!BC.ventL||!BC.ventR){killStudentBattle();}
+  }
+
+  // Air quality deaths
+  if(BC.airQuality<20&&BC.tickCount%4===0){
+    addBattleLog('danger','공기 오염! 학생 사망!');
+    killStudentBattle();
+  }
+
+  // Wall breach deaths
+  REPAIR_POINTS.forEach(p=>{
+    if(BC.wallHP[p]<=0&&Math.random()<0.12){
+      addBattleLog('danger',`${p} 붕괴! 9 침입!`);
+      if(Math.random()<0.35)killStudentBattle();
+    }
+  });
+
+  // Spawn entities
+  spawnEntities(day);
+
+  if(BC.waveProgress>=100){advanceWave();return;}
+  updateBattleUI();
+}
+
+function spawnEntities(day){
+  const maxE=day>=99?16:day>=96?10:day>=93?7:4;
+  if(BC.entities.length>=maxE||Math.random()>0.35)return;
+  const w=BC.wall,W=BC.W,H=BC.H;
+  const side=Math.floor(Math.random()*4);
+  let ex,ey;
+  if(side===0){ex=w+Math.random()*(W-w*2);ey=-12;}
+  else if(side===1){ex=w+Math.random()*(W-w*2);ey=H+12;}
+  else if(side===2){ex=-12;ey=w+Math.random()*(H-w*2);}
+  else{ex=W+12;ey=w+Math.random()*(H-w*2);}
+  const types=['slow','wall','jump','dash'];
+  const wts=day>=99?[1,1,1,1]:day>=96?[2,1,1,1]:[3,1,0,0];
+  const sum=wts.reduce((a,b)=>a+b,0);let r=Math.random()*sum,ti=0;
+  for(let i=0;i<wts.length;i++){r-=wts[i];if(r<=0){ti=i;break;}}
+  BC.entities.push({
+    id:BC.entityId++,type:types[ti],x:ex,y:ey,
+    hp:types[ti]==='slow'?120:60,
+    speed:types[ti]==='slow'?0.55:types[ti]==='dash'?0:1.2,
+    dashTimer:types[ti]==='dash'?60:0,dashDx:0,dashDy:0,
+    jumpTimer:types[ti]==='jump'?Math.floor(Math.random()*80+40):0,
+    justJumped:false,
+  });
+}
+
+function updatePlayerMovement(){
+  if(!BC.canvas)return;
+  const W=BC.W,H=BC.H,s=BC.pSpeed,r=BC.pSize;
+  let dx=0,dy=0;
+  if(BC.keys['KeyW']||BC.keys['ArrowUp'])   dy-=s;
+  if(BC.keys['KeyS']||BC.keys['ArrowDown']) dy+=s;
+  if(BC.keys['KeyA']||BC.keys['ArrowLeft']) dx-=s;
+  if(BC.keys['KeyD']||BC.keys['ArrowRight'])dx+=s;
+  // Allow player to reach ALL objects: clamp to full arena size minus sprite radius
+  BC.px=Math.max(r,Math.min(W-r,BC.px+dx));
+  BC.py=Math.max(r,Math.min(H-r,BC.py+dy));
+}
+
+const _icd={};
+let _entityHitCd=0;
+function checkInteractions(){
+  const now=Date.now();
+
+  // Object interactions
+  for(const[,obj]of Object.entries(BC.objects)){
+    if(Math.hypot(BC.px-obj.x,BC.py-obj.y)<BC.interactRadius){
+      const key=obj.type+(obj.pt||'');
+      if(!_icd[key]||now-_icd[key]>900){
+        _icd[key]=now;
+        doInteract(obj);
+      }
+    }
+  }
+
+  // Entity (9 개체) collision with player
+  if(now>_entityHitCd){
+    for(const e of BC.entities){
+      const hitR=e.type==='slow'?22:16;
+      if(Math.hypot(BC.px-e.x,BC.py-e.y)<hitR+BC.pSize){
+        _entityHitCd=now+1200; // 1.2s cooldown per hit
+        addBattleLog('danger',`9 개체 충돌! 벽이 손상된다!`);
+        // entity contact damages the nearest wall point
+        let minDist=Infinity, nearPt=null;
+        for(const[,obj]of Object.entries(BC.objects)){
+          if(obj.type==='repair'){
+            const d=Math.hypot(BC.px-obj.x,BC.py-obj.y);
+            if(d<minDist){minDist=d;nearPt=obj.pt;}
+          }
+        }
+        if(nearPt) BC.wallHP[nearPt]=Math.max(0,BC.wallHP[nearPt]-18);
+        // Visual shake effect on canvas
+        if(BC.canvas){
+          BC.canvas.style.transition='transform 0.05s';
+          BC.canvas.style.transform='translateX(6px)';
+          setTimeout(()=>{BC.canvas.style.transform='translateX(-6px)';},55);
+          setTimeout(()=>{BC.canvas.style.transform='';},110);
+        }
+        updateBattleUI();
+        break;
+      }
+    }
+  }
+}
+function doInteract(obj){
+  if(obj.type==='repair'){
+    const hp=BC.wallHP[obj.pt];
+    if(hp<100){
+      BC.wallHP[obj.pt]=Math.min(100,hp+45);
+      addBattleLog('success',`${obj.pt} 수리! (+45%) → ${Math.round(BC.wallHP[obj.pt])}%`);
+      updateBattleUI();
+    }else{
+      addBattleLog('system',`${obj.pt}: 정상 (100%)`);
+    }
+  }else if(obj.type==='ventL'){
+    if(!BC.ventL){
+      BC.ventL=true;
+      addBattleLog('success','✓ 좌측 환풍구 재기동!');
+      document.getElementById('b-ventL').textContent='ON';
+      document.getElementById('b-ventL').style.color='var(--green-bright)';
+    }else{
+      addBattleLog('system','환풍L: 정상 가동 중');
+    }
+  }else if(obj.type==='ventR'){
+    if(!BC.ventR){
+      BC.ventR=true;
+      addBattleLog('success','✓ 우측 환풍구 재기동!');
+      document.getElementById('b-ventR').textContent='ON';
+      document.getElementById('b-ventR').style.color='var(--green-bright)';
+    }else{
+      addBattleLog('system','환풍R: 정상 가동 중');
+    }
+  }else if(obj.type==='voltage'){
+    if(BC.voltageCharging){
+      addBattleLog('system','전압 충전 중...');
+    }else if(!BC.noiseActive){
+      addBattleLog('system','⚡ 전압장치: 방송 노이즈 없음 — 대기');
+    }else{
+      // Noise active — attempt discharge
+      if(G.items.metal<1||G.items.cable<1||G.items.water<1){
+        addBattleLog('danger','아이템 부족! 전압 방출 불가!');
+        broadcastFail();return;
+      }
+      G.items.metal--;G.items.cable--;G.items.water--;
+      BC.noiseActive=false;BC.noiseTimer=0;
+      BC.voltageCharging=true;BC.voltageTimer=4;
+      addBattleLog('info','⚡ 전압 충전 중...');
+      document.getElementById('b-voltage').textContent='충전중';
+      hideBroadcastAlert();
+      updateSidebar();
+    }
+  }
+}
+
+function renderBattle(){
+  if(!BC.ctx)return;
+  const ctx=BC.ctx,W=BC.W,H=BC.H,w=BC.wall;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#0d0d12';ctx.fillRect(0,0,W,H);
+  drawArenaWalls(ctx,W,H,w);
+  drawArenaObjects(ctx);   // drawn after walls so visible on top
+  updateAndDrawEntities(ctx,W,H,w);
+  drawPlayer(ctx);
+  drawProximityRings(ctx);
+}
+
+function drawArenaWalls(ctx,W,H,w){
+  // Draw repair point sections with HP coloring
+  const pts=[
+    {p:'L1',rx:0,ry:H*0.2,rw:w,rh:H*0.25},
+    {p:'L2',rx:0,ry:H*0.55,rw:w,rh:H*0.25},
+    {p:'R1',rx:W-w,ry:H*0.2,rw:w,rh:H*0.25},
+    {p:'R2',rx:W-w,ry:H*0.55,rw:w,rh:H*0.25},
+    {p:'B1',rx:w+(W-w*2)*0/4,ry:H-w,rw:(W-w*2)/4,rh:w},
+    {p:'B2',rx:w+(W-w*2)*1/4,ry:H-w,rw:(W-w*2)/4,rh:w},
+    {p:'B3',rx:w+(W-w*2)*2/4,ry:H-w,rw:(W-w*2)/4,rh:w},
+    {p:'B4',rx:w+(W-w*2)*3/4,ry:H-w,rw:(W-w*2)/4,rh:w},
+  ];
+  pts.forEach(({p,rx,ry,rw,rh})=>{
+    const hp=BC.wallHP[p];
+    ctx.fillStyle=hp<=0?'#330d0d':hp<30?'#4d1a0d':hp<60?'#2a2010':'#16161c';
+    ctx.fillRect(rx,ry,rw,rh);
+    ctx.strokeStyle=hp<=0?'#cc3333':hp<30?'#cc6633':hp<60?'#887733':'#2a2a35';
+    ctx.lineWidth=hp<=0?2:1;ctx.strokeRect(rx,ry,rw,rh);
+    ctx.fillStyle=hp<=0?'#ff4444':hp<30?'#ffaa44':hp<60?'#cc8833':'#5a5a72';
+    ctx.font='bold 8px monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(hp<=0?'✗':p,rx+rw/2,ry+rh/2);
+    if(hp>0){ctx.font='7px monospace';ctx.fillText(hp+'%',rx+rw/2,ry+rh/2+10);}
+  });
+  // Solid wall corners + top + sides
+  ctx.fillStyle='#16161c';
+  ctx.fillRect(0,0,W,w);// top full
+  ctx.fillRect(0,0,w,H*0.2);ctx.fillRect(0,H*0.45,w,H*0.1);ctx.fillRect(0,H*0.8,w,H*0.2);
+  ctx.fillRect(W-w,0,w,H*0.2);ctx.fillRect(W-w,H*0.45,w,H*0.1);ctx.fillRect(W-w,H*0.8,w,H*0.2);
+  ctx.fillRect(0,H-w,w,w);ctx.fillRect(W-w,H-w,w,w);
+  ctx.strokeStyle='#2a2a35';ctx.lineWidth=2;
+  ctx.strokeRect(0,0,W,w);
+  ctx.strokeRect(0,0,w,H);ctx.strokeRect(W-w,0,w,H);ctx.strokeRect(0,H-w,W,w);
+}
+
+function drawArenaObjects(ctx){
+  for(const[,obj]of Object.entries(BC.objects)){
+    let col,border,r=14;
+    if(obj.type==='ventL'){
+      col=BC.ventL?'rgba(68,119,68,0.4)':'rgba(100,20,20,0.6)';
+      border=BC.ventL?'#66bb66':'#ff4444';
+    }else if(obj.type==='ventR'){
+      col=BC.ventR?'rgba(68,119,68,0.4)':'rgba(100,20,20,0.6)';
+      border=BC.ventR?'#66bb66':'#ff4444';
+    }else if(obj.type==='voltage'){
+      const n=BC.noiseActive,c=BC.voltageCharging;
+      col=c?'rgba(255,200,80,0.5)':n?'rgba(200,120,30,0.5)':'rgba(80,50,15,0.4)';
+      border=c?'#ffdd88':n?'#ffaa44':'#cc8833';r=19;
+    }else{
+      const hp=BC.wallHP[obj.pt]||0;
+      col=hp<=0?'rgba(80,20,20,0.5)':hp<30?'rgba(100,50,20,0.4)':hp<60?'rgba(70,60,20,0.3)':'rgba(30,40,40,0.3)';
+      border=hp<=0?'#cc3333':hp<30?'#cc6633':hp<60?'#887733':'#335566';
+    }
+    ctx.shadowColor=border;ctx.shadowBlur=8;
+    ctx.beginPath();ctx.arc(obj.x,obj.y,r,0,Math.PI*2);
+    ctx.fillStyle=col;ctx.fill();
+    ctx.strokeStyle=border;ctx.lineWidth=2;ctx.stroke();
+    ctx.shadowBlur=0;
+    ctx.fillStyle=border;ctx.font='bold 9px monospace';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(obj.label,obj.x,obj.y);
+    // state label
+    if(obj.type==='ventL'||obj.type==='ventR'){
+      const stopped=(obj.type==='ventL')?!BC.ventL:!BC.ventR;
+      ctx.fillStyle=stopped?'#ff4444':'#66bb66';ctx.font='7px monospace';
+      ctx.fillText(stopped?'정지':'ON',obj.x,obj.y+r+8);
+    }else if(obj.type==='voltage'&&BC.noiseActive){
+      const sec=Math.ceil(BC.noiseTimer*0.7);
+      ctx.fillStyle='#ffaa44';ctx.font='bold 8px monospace';
+      ctx.fillText(sec+'s',obj.x,obj.y+r+9);
+    }else if(obj.type==='repair'){
+      const hp=BC.wallHP[obj.pt]||0;
+      if(hp<100){ctx.fillStyle=border;ctx.font='7px monospace';ctx.fillText(hp+'%',obj.x,obj.y+r+9);}
+    }
+  }
+}
+
+function updateAndDrawEntities(ctx,W,H,w){
+  BC.entities=BC.entities.filter(e=>{
+    if(e.type==='slow'){
+      const t=nearestWallCenter(e.x,e.y,W,H,w);
+      const d=Math.hypot(t.x-e.x,t.y-e.y)||1;
+      e.x+=(t.x-e.x)/d*e.speed;e.y+=(t.y-e.y)/d*e.speed;
+    }else if(e.type==='wall'){
+      const dx=BC.px-e.x,dy=BC.py-e.y,d=Math.hypot(dx,dy)||1;
+      e.x+=dx/d*0.8;e.y+=dy/d*0.8;
+    }else if(e.type==='jump'){
+      e.jumpTimer--;
+      if(e.jumpTimer<=0&&!e.justJumped){
+        e.x=w*1.5+Math.random()*(W-w*3);e.y=w*1.5+Math.random()*(H-w*3);
+        e.justJumped=true;e.jumpTimer=Math.floor(Math.random()*60+40);
+        setTimeout(()=>{e.justJumped=false;},500);
+      }else{
+        const dx=BC.px-e.x,dy=BC.py-e.y,d=Math.hypot(dx,dy)||1;
+        e.x+=dx/d*0.6;e.y+=dy/d*0.6;
+      }
+    }else if(e.type==='dash'){
+      e.dashTimer--;
+      if(e.dashTimer<=0){
+        const dx=BC.px-e.x,dy=BC.py-e.y,d=Math.hypot(dx,dy)||1;
+        e.dashDx=dx/d*5;e.dashDy=dy/d*5;e.dashTimer=80;
+      }
+      if(e.dashDx){
+        e.x+=e.dashDx;e.y+=e.dashDy;
+        e.dashDx*=0.92;e.dashDy*=0.92;
+        if(Math.hypot(e.dashDx,e.dashDy)<0.1){e.dashDx=0;e.dashDy=0;}
+      }else{
+        const dx=BC.px-e.x,dy=BC.py-e.y,d=Math.hypot(dx,dy)||1;
+        e.x+=dx/d*0.3;e.y+=dy/d*0.3;
+      }
+    }
+    e.x=Math.max(-20,Math.min(W+20,e.x));
+    e.y=Math.max(-20,Math.min(H+20,e.y));
+    return true;
+  });
+  BC.entities.forEach(e=>{
+    const border=e.type==='slow'?'#cc3333':e.type==='dash'?'#ff6622':e.type==='jump'?'#8844cc':'#883388';
+    const fill=e.type==='slow'?'#331111':e.type==='dash'?'#551100':e.type==='jump'?'#221133':'#221122';
+    const er=e.type==='slow'?9:6;
+    const nearPlayer=Math.hypot(BC.px-e.x,BC.py-e.y)<(er+BC.pSize+20);
+    if(nearPlayer){ctx.shadowColor=border;ctx.shadowBlur=16;}
+    ctx.beginPath();ctx.arc(e.x,e.y,er,0,Math.PI*2);
+    ctx.fillStyle=fill;ctx.fill();ctx.strokeStyle=border;ctx.lineWidth=nearPlayer?2.5:1.5;ctx.stroke();
+    ctx.shadowBlur=0;
+    // Draw 9 label
+    ctx.fillStyle=border;ctx.font='bold 7px monospace';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('9',e.x,e.y);
+  });
+}
+function nearestWallCenter(ex,ey,W,H,w){
+  const cs=[{x:w/2,y:H/2},{x:W-w/2,y:H/2},{x:W/2,y:w/2},{x:W/2,y:H-w/2}];
+  return cs.reduce((b,c)=>Math.hypot(ex-c.x,ey-c.y)<Math.hypot(ex-b.x,ey-b.y)?c:b);
+}
+function drawPlayer(ctx){
+  ctx.shadowColor='#44aacc';ctx.shadowBlur=12;
+  ctx.beginPath();ctx.arc(BC.px,BC.py,BC.pSize,0,Math.PI*2);
+  ctx.fillStyle='rgba(51,102,119,0.9)';ctx.fill();
+  ctx.strokeStyle='#44aacc';ctx.lineWidth=2;ctx.stroke();
+  ctx.shadowBlur=0;
+  ctx.fillStyle='#e8e8f5';ctx.font='bold 9px monospace';
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('P',BC.px,BC.py);
+}
+function drawProximityRings(ctx){
+  for(const[,obj]of Object.entries(BC.objects)){
+    const dist=Math.hypot(BC.px-obj.x,BC.py-obj.y);
+    if(dist<BC.interactRadius+30){
+      const alpha=Math.max(0,1-(dist/(BC.interactRadius+30)));
+      ctx.beginPath();ctx.arc(obj.x,obj.y,BC.interactRadius,0,Math.PI*2);
+      ctx.strokeStyle=`rgba(68,170,204,${alpha*0.6})`;ctx.lineWidth=2;
+      ctx.setLineDash([4,4]);ctx.stroke();ctx.setLineDash([]);
+      // Show "접촉!" label when very close
+      if(dist<BC.interactRadius){
+        ctx.fillStyle='rgba(68,170,204,0.9)';ctx.font='bold 10px monospace';
+        ctx.textAlign='center';ctx.textBaseline='top';
+        ctx.fillText('접촉!',obj.x,obj.y-28);
+      }
+    }
+  }
+}
+
+function showBroadcastAlert(cls){
+  const el=document.getElementById('broadcast-alert');
+  el.className=`broadcast-alert visible ${cls}`;
+  el.textContent=cls==='noise'?'⚡ 방송 노이즈! 전압 장치로 이동하라!':'📡 방송 송출! 대량 침입!';
+}
+function hideBroadcastAlert(){
+  document.getElementById('broadcast-alert').className='broadcast-alert';
+}
+
+function broadcastFail(){
+  addBattleLog('danger','방송 송출! 대량의 9 개체 침입!');
+  showBroadcastAlert('fail');
+  BC.noiseActive=false;BC.noiseTimer=0;
+  REPAIR_POINTS.forEach(p=>BC.wallHP[p]=Math.max(0,BC.wallHP[p]-45));
+  for(let i=0;i<2;i++)killStudentBattle();
+  setTimeout(hideBroadcastAlert,3000);
+}
+
+function advanceWave(){
+  clearInterval(BC.tickInterval);BC.tickInterval=null;
+  const day=BC.day;
+  if(day<93){
+    BC.day=93;G.day=93;
+    document.getElementById('battle-day').textContent='DAY 93 — 1차 웨이브';
+    document.getElementById('wave-label').textContent='DAY 93 — 1차 웨이브';
+    addBattleLog('danger','DAY 93 — 1차 대규모 공격!');
+    addBattleLog('warning','방송 노이즈 감지 즉시 전압 장치에 접촉!');
+    initBattleState(93);startBattleLogic();
+  }else if(day<96){
+    BC.day=96;G.day=96;
+    document.getElementById('battle-day').textContent='DAY 96 — 2차 웨이브';
+    document.getElementById('wave-label').textContent='DAY 96 — 2차 웨이브';
+    addBattleLog('danger','DAY 95 화학가스 경보! 환풍구 필수 유지!');
+    addBattleLog('danger','DAY 96 — 돌진형 등장!');
+    initBattleState(96);startBattleLogic();
+  }else if(day<99){
+    BC.day=99;G.day=99;
+    document.getElementById('battle-day').textContent='DAY 99 — 최종 웨이브';
+    document.getElementById('wave-label').textContent='DAY 99 — 최종 웨이브';
+    addBattleLog('danger','DAY 99 — 최종 공격! 전 유형 동시 등장!');
+    initBattleState(99);startBattleLogic();
+  }else{
+    G.day=100;
+    stopBattle();
+    setTimeout(scene_day100,1200);
+  }
+}
+
+function killStudentBattle(){
+  const alive=G.students.filter(s=>s.status==='alive'&&s.id!=='주인공');
+  if(!alive.length)return;
+  const v=alive[Math.floor(Math.random()*alive.length)];
+  killStudent(v.id,'전투 사망');
+  addBattleLog('danger',`${v.name} 사망!`);
+  updateBattleUI();
+}
+
+function updateBattleUI(){
+  const avg=Math.round(Object.values(BC.wallHP).reduce((a,b)=>a+b,0)/8);
+  const $=id=>document.getElementById(id);
+  $('b-wall').textContent=avg;
+  $('b-air').textContent=Math.round(BC.airQuality);
+  $('b-alive').textContent=aliveCount();
+  $('b-ventL').textContent=BC.ventL?'ON':'정지';
+  $('b-ventL').style.color=BC.ventL?'var(--green-bright)':'var(--red-bright)';
+  $('b-ventR').textContent=BC.ventR?'ON':'정지';
+  $('b-ventR').style.color=BC.ventR?'var(--green-bright)':'var(--red-bright)';
+  if(!BC.noiseActive&&!BC.voltageCharging)$('b-voltage').textContent='대기';
+}
+
+// Legacy stubs
+function repairAll(){}
+function skipToNextPhase(){}
+function repairVent(){}
+function repairWall(){}
+function activateVoltage(){}
+function setupStudentTokens(){}
+function startBattleLoop(){}
+function initBattle(){}
+
+function addBattleLog(type,msg){
+  const le=document.getElementById('battle-log-entries');
+  const d=document.createElement('div');
+  d.className=`log-entry ${type}`;d.textContent=msg;
+  le.appendChild(d);le.scrollTop=le.scrollHeight;
+  while(le.children.length>40)le.removeChild(le.firstChild);
+}
+
+// (구형 전투 코드 제거됨 — BC 시스템으로 통합)
+
+// ═══ DAY 100 ═══
+function scene_day100() {
+  showScreen('game-screen');
+  G.day = 100;
+  const alive = aliveCount();
+  const allAlive = alive >= 10;
+  const tpLow = G.tp <= 3;
+  const canFight = allAlive && G.flags.day50Stay;
+
+  renderScene('DAY 100 — 최종 결전', '교장 P',
+  `<p>100일째 아침. 바리케이트 외부의 공격이 멈췄다. 9 개체들이 비정상적으로 정지해 있다.</p>
+  <p>침묵.</p>
+  <p>그리고 — 교장 P가 직접 들어왔다.</p>
+  <p>그는 처음부터 이렇게 될 것을 알고 있었다는 듯 차분하다.</p>
+  <blockquote style="border-left:2px solid var(--amber);padding:12px 16px;margin:16px 0;font-size:14px;color:var(--amber-bright);font-family:'Share Tech Mono',monospace;line-height:1.8">"당신들은 살아남았군요. 예상보다 많이. 그것 자체가 자격의 증명입니다. 새로운 세계는 강한 자만이 남습니다. 당신들도 그 자격이 있어요."</blockquote>
+  <p>주변에서 남아 있던 9 개체들이 다시 활성화된다. 최후의 전투가 시작된다.</p>
+  <div class="scene-info">현재: TP ${G.tp} / 생존 ${alive}명 / 준비 ${G.flags.itemsReady?'완료':'미흡'}</div>`,
+  canFight ? [
+    { text:`P를 제거한다 ${tpLow?'':'(TP 초과 — 제한됨)'}`, cls: tpLow ? '' : 'danger', fn: tpLow ? 'ending_true1' : 'ending_bad_100' },
+    { text:'P와 함께한다 — 새로운 세계를 받아들인다', cls:'special', fn:'ending_true2' },
+  ] : [
+    { text:'최후를 맞이한다', cls:'danger', fn:'ending_bad_100' },
+    { text:'P와 함께한다', cls:'special', fn:'ending_true2' },
+  ]);
+}
+
+// ════════════════════════════════════════════════════════════════
+//  ENDINGS
+// ════════════════════════════════════════════════════════════════
+
+function showEnding(type, title, story, stats) {
+  stopBattle();
+  showScreen('ending-screen');
+  const labels = { bad:'베드 엔딩', normal:'노멀 엔딩', true:'진 엔딩 I', true2:'진 엔딩 II' };
+  document.getElementById('ending-content').innerHTML = `
+    <div class="ending-type-label ${type}">${labels[type]||type}</div>
+    <div class="ending-title-big ${type}">${title}</div>
+    <div class="ending-story">${story}</div>
+    <div class="ending-stats">
+      ${stats.map(s=>`<div class="ending-stat"><div class="ending-stat-val">${s.val}</div><div class="ending-stat-label">${s.label}</div></div>`).join('')}
+    </div>
+    <button class="restart-btn" onclick="resetGame()">다시 시작</button>
+  `;
+}
+
+function ending_bad_escape49() {
+  showEnding('bad','귀환',
+  `<p>지하실을 벗어났다. 집으로 돌아갔다.</p>
+  <p>며칠이 지나 신체 이상이 나타나기 시작했다. 처음에는 발열, 그 다음은 근육 경련. 그리고 피부가—</p>
+  <p>당신은 급식실에서 보았던 그것이 되어가고 있었다. 이미 늦었다. 주변 사람들이 피해를 입었다. 사건은 확산되었다.</p>
+  <p>지하실에서 살아남았지만, 당신은 재앙을 외부로 옮겼다.</p>`,
+  [
+    {val:G.tp,label:'TP (낮을수록 좋음)'},
+    {val:1,label:'생존자'},
+    {val:'베드',label:'엔딩 등급'},
+  ]);
+}
+
+function ending_normal_escape49() {
+  showEnding('normal','탈출',
+  `<p>지하실을 벗어났다. 배급을 먹지 않아 9화는 일어나지 않았다.</p>
+  <p>그러나 외부 상황은 이미 혼란이었다. 학교에서 시작된 9화가 확산되고 있었다.</p>
+  <p>당신은 도망치다 통제 불능 상태의 9 개체와 마주쳤다. 지하실의 진실은 밝혀지지 않았다. P의 계획은 계속된다.</p>
+  <p>인간으로 죽었다. 아무것도 막지 못한 채.</p>`,
+  [
+    {val:G.tp,label:'TP'},
+    {val:1,label:'생존자'},
+    {val:'노멀',label:'엔딩 등급'},
+  ]);
+}
+
+function ending_bad_escape50() {
+  showEnding('bad','50일의 귀환',
+  `<p>50일, 기회를 틈타 탈출했다. 하지만 배급을 먹은 탓에—</p>
+  <p>외부로 나간 지 며칠 후, 9화가 시작되었다. 더 빠르고 강렬하게.</p>
+  <p>당신은 P의 실험 결과물이 되어 외부로 확산되는 매개체가 되었다.</p>`,
+  [
+    {val:G.tp,label:'TP'},
+    {val:'베드',label:'엔딩 등급'},
+    {val:0,label:'진실 해결'},
+  ]);
+}
+
+function ending_normal_escape50() {
+  showEnding('normal','50일의 탈출자',
+  `<p>50일, 탈출에 성공했다. 배급을 먹지 않았으므로 9화는 없다.</p>
+  <p>외부 세계는 점차 변해가고 있었다. P의 계획은 계속 진행되었고, 세계는 혼란에 빠졌다.</p>
+  <p>당신은 살아남았다. 그러나 지하실에서 있었던 일은 아무도 모른다. 진실은 봉인되었다.</p>
+  <p>생존했지만 — 아무것도 끝내지 못했다.</p>`,
+  [
+    {val:G.tp,label:'TP'},
+    {val:aliveCount(),label:'생존자'},
+    {val:'노멀',label:'엔딩 등급'},
+  ]);
+}
+
+function ending_bad_100() {
+  showEnding('bad','패배',
+  `<p>100일. 최후의 전투에서 당신의 편은 무너졌다.</p>
+  <p>P는 살아남은 당신을 바라보며 말했다. "이것도 선별의 결과입니다."</p>
+  <p>세계 정복은 완료되었다. 강한 자만 남은 세계가 만들어졌다. 당신은 그 세계의 일부가 되었다 — 자신의 의지와 무관하게.</p>`,
+  [
+    {val:G.tp,label:'TP'},
+    {val:aliveCount(),label:'최종 생존'},
+    {val:'베드',label:'엔딩 등급'},
+  ]);
+}
+
+function ending_true1() {
+  showEnding('true','해방',
+  `<p>당신과 살아남은 학생들은 P를 향해 나아갔다.</p>
+  <p>최후의 충돌. P는 9 개체를 통제하며 저항했다. 그러나 당신들은 포기하지 않았다.</p>
+  <p>P가 쓰러졌다. 9 개체들의 통제가 무너졌다. 외부의 혼란은 계속되었지만 — 새로운 학살은 멈췄다.</p>
+  <p>지하실에서 있었던 일은 외부에 알려지지 않은 채 봉인되었다. 희생된 생명은 돌아오지 않는다. 그러나 당신은 P의 세계를 거부했다.</p>
+  <p>살아남은 자들은 폐허에서 천천히 걸어나갔다.</p>`,
+  [
+    {val:G.tp,label:'최종 TP'},
+    {val:aliveCount(),label:'최종 생존'},
+    {val:'진 엔딩 I',label:'등급'},
+  ]);
+}
+
+function ending_true2() {
+  showEnding('true2','신세계',
+  `<p>"당신의 선택을 인정합니다." P가 말했다.</p>
+  <p>당신은 P와 함께하기로 했다. 새로운 세계를 받아들이기로.</p>
+  <p>9 개체는 통제된 상태로 유지되었고, 살아남은 인간들은 새로운 질서의 구성원이 되었다. 약한 인간이 존재하지 않는 세계.</p>
+  <p>당신은 그 세계의 핵심이 되었다. P의 신세계가 완성되었다. 기존 인류는 사라졌다. 이것이 강자만 남은 세계의 모습이다.</p>
+  <p>— 이것이 옳은 선택이었는지, 당신만이 안다.</p>`,
+  [
+    {val:G.tp,label:'최종 TP'},
+    {val:aliveCount(),label:'최종 생존'},
+    {val:'진 엔딩 II',label:'등급'},
+  ]);
+}
+
+function resetGame() {
+  G.day=0; G.tp=0; G.ateFood=false;
+  G.flags = { planKnown:false,itemsReady:false,maruMet:false,allSurvive:true,truePath:false,day50Stay:false };
+  G.items = { metal:0,cable:0,water:0 };
+  G.students.forEach(s=>s.status='alive');
+  stopBattle();
+  // Reset BC
+  BC.broadcastsFired={93:false,96:false,99:false};
+  BC.entities=[];BC.waveProgress=0;BC.tickCount=0;
+  for(const k in _icd) delete _icd[k];
+  _entityHitCd=0;
+  showScreen('title-screen');
+  updateHeader();
+  updateSidebar();
+}
+
+// ════════════════════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════════════════════
+updateHeader();
+updateSidebar();
+</script>
+</body>
+</html>
