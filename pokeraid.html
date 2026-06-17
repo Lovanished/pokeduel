@@ -195,8 +195,8 @@
       'hyper_beam': { name: "파괴광선", type: 'active', ap: 4, chance: 10 },
       'giga_impact': { name: "기가임팩트", type: 'active', ap: 4, chance: 10 },
       'icy_wind': { name: "얼다바람", type: 'active', ap: 6, chance: 10 },
-      'enhanced_extreme_speed': { name: "<span class='skill-enhanced'>신속</span>", type: 'active', ap: 0, chance: 12 },
-      'burst_stream': { name: "<span class='skill-burst'>버스트 스트림</span>", type: 'active', ap: 0, chance: 10 },
+      'enhanced_extreme_speed': { name: "<span class='skill-enhanced'>신속</span>", type: 'enhanced', ap: 0, chance: 12 },
+      'burst_stream': { name: "<span class='skill-burst'>버스트 스트림</span>", type: 'enhanced', ap: 0, chance: 10 },
       'sheer_force': { name: "우격다짐", type: 'passive', ap: 4 },
       'keen_eye': { name: "날카로운눈", type: 'passive', ap: 3 },
       'heatproof': { name: "내열", type: 'passive', ap: 4 },
@@ -447,7 +447,8 @@
       grid.innerHTML = '';
       playerData.unlockedSkills.forEach(id => {
         const skill = SKILLS_DB[id];
-        if(skill.type === '강화 액티브' || skill.ap === 0 && skill.chance !== 100 && id !== 'tackle' && id !== 'nitro_charge' && !skill.desc) return; // Hide internal
+        if(skill.type === 'enhanced') return; // 강화 액티브는 리스트에서 숨김 (장착 불가)
+        if(skill.ap === 0 && skill.chance !== 100 && id !== 'tackle' && id !== 'nitro_charge' && !skill.desc) return; // Hide internal
         const isEquipped = playerData.equipped.includes(id);
         const card = document.createElement('div');
         card.className = `skill-card ${isEquipped ? 'equipped' : ''}`;
@@ -474,6 +475,7 @@
     }
 
     function equipSkill(id) {
+      if (SKILLS_DB[id].type === 'enhanced') return alert(`❌ 강화 액티브는 직접 장착할 수 없습니다.`);
       if (playerData.equipped.includes(id)) return;
       let currentAp = playerData.equipped.reduce((sum, sid) => sum + (SKILLS_DB[sid]?.ap || 0), 0);
       if (currentAp + SKILLS_DB[id].ap > playerData.maxAp) return alert(`❌ AP 상한 초과!`);
@@ -590,7 +592,8 @@
 
         let actives = attacker.combatDeck.filter(id => {
           let s = SKILLS_DB[id];
-          return s && s.type === 'active' && s.chance > 0 && (!s.limit || (attacker.limits[id] || 0) < s.limit) && (!s.condition || s.condition(attacker));
+          // 액티브 및 강화 액티브 모두 발동 확률 체크 대상에 포함
+          return s && (s.type === 'active' || s.type === 'enhanced') && s.chance > 0 && (!s.limit || (attacker.limits[id] || 0) < s.limit) && (!s.condition || s.condition(attacker));
         });
         actives.sort(() => Math.random() - 0.5);
 
