@@ -3,185 +3,367 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pokeraid - Deck Building & Battle</title>
+  <title>Pokeraid - Deck Building & Battle RPG</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- CryptoJS for secure encryption -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  <!-- Google Fonts Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
   <style>
-    :root {
-      --bg: #1e1e2e; --panel-bg: #2a2b3c; --text: #cdd6f4;
-      --sys: #89dceb; --dmg: #f38ba8; --heal: #a6e3a1; 
-      --skill: #f9e2af; --crit: #fab387; --evade: #b4befe; --ap-color: #fab387;
+    body {
+      font-family: 'Inter', 'Malgun Gothic', sans-serif;
+      background-color: #0f172a;
     }
-    body { background-color: var(--bg); color: var(--text); font-family: 'Malgun Gothic', monospace; margin: 0; padding: 20px; }
-    h1, h2, h3 { text-align: center; color: #fff; margin-bottom: 10px; }
-    
-    .screen { display: none; max-width: 1100px; margin: 0 auto; gap: 20px; }
-    .active-view { display: flex; }
-    .panel { background: var(--panel-bg); padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-
-    /* 로비 레이아웃 */
-    #lobby-screen { flex-direction: column; }
-    .data-panel { background: #181825; padding: 10px 20px; border-radius: 8px; display: flex; justify-content: center; flex-wrap: wrap; gap: 15px; margin-bottom: 10px; border: 1px solid #444; }
-    
-    .btn-sub { background: #45475a; color: #cdd6f4; border: 1px solid #585b70; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; transition: 0.2s; }
-    .btn-sub:hover { background: #585b70; color: #fff; }
-    
-    .lobby-top { display: flex; gap: 20px; flex-wrap: wrap; }
-    .player-info-panel { flex: 1; min-width: 300px; background: #11111b; border: 1px solid #89b4fa; }
-    .story-panel { flex: 1; min-width: 300px; }
-
-    .exp-bar-bg { width: 100%; background: #444; height: 10px; border-radius: 5px; margin-top: 5px; overflow: hidden; }
-    .exp-bar-fill { height: 100%; background: #a6e3a1; transition: width 0.3s; }
-
-    .ap-wrapper { background: #333; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
-    .ap-info { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; }
-    .ap-bar-bg { width: 100%; background: #444; height: 12px; border-radius: 6px; overflow: hidden; }
-    .ap-bar-fill { height: 100%; background: var(--ap-color); transition: width 0.3s; }
-
-    .deck-container { display: flex; flex-wrap: wrap; gap: 20px; }
-    .skill-list-panel { flex: 1.5; min-width: 300px; }
-    .equipped-panel { flex: 1; min-width: 300px; }
-    
-    .skill-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-top: 10px; }
-    .skill-card { background: #1e1e2e; border: 1px solid #444; border-radius: 6px; padding: 12px; cursor: pointer; transition: 0.2s; position: relative; }
-    .skill-card:hover { border-color: #89b4fa; background: #252636; }
-    .skill-card.equipped { border-color: #a6e3a1; background: #1c2d26; }
-    .skill-card .skill-name { font-weight: bold; color: #fff; margin-bottom: 5px; }
-    .skill-card .skill-ap { font-size: 12px; color: var(--ap-color); }
-    .skill-card .skill-desc { font-size: 11px; color: #a6adc8; margin-top: 5px; }
-    
-    .slot-list, .stage-list { display: flex; flex-direction: column; gap: 8px; }
-    .slot-item { background: #11111b; border: 1px dashed #555; border-radius: 6px; padding: 12px; display: flex; justify-content: space-between; align-items: center; }
-    .slot-item.filled { border-style: solid; border-color: #89b4fa; background: #1e1e2e; }
-    .btn-remove { background: #f38ba8; color: #111; border: none; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; }
-
-    .stage-item { background: #181825; border: 1px solid #f38ba8; border-radius: 6px; padding: 12px; cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center;}
-    .stage-item:hover { background: #313244; }
-    .stage-item .stage-title { font-weight: bold; color: #f38ba8; }
-    .stage-item .stage-reward { font-size: 12px; color: #a6e3a1; }
-
-    /* 전투 화면 */
-    #battle-screen { flex-wrap: wrap; }
-    .status-panel { flex: 1; min-width: 250px; }
-    .bar-bg { width: 100%; background: #444; height: 20px; border-radius: 10px; overflow: hidden; margin-bottom: 10px; border: 1px solid #000; }
-    .hp-bar { height: 100%; background: var(--dmg); transition: width 0.2s; }
-    .log-container { flex: 2; display: flex; flex-direction: column; min-width: 300px; }
-    #log-box { flex-grow: 1; background: #11111b; border: 1px solid #444; border-radius: 8px; padding: 15px; height: 450px; overflow-y: auto; font-size: 14px; line-height: 1.5; margin-bottom: 15px; }
-    
-    .btn-main { background: #89b4fa; color: #111; border: none; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer; transition: 0.2s; width: 100%; margin-top: 10px; }
-    .btn-main:hover { background: #b4befe; }
-    .btn-main:disabled { background: #555; cursor: not-allowed; color: #888; }
-
-    .log-sys { color: var(--sys); font-weight: bold; }
-    .log-dmg { color: var(--dmg); font-weight: bold; }
-    .log-crit { color: var(--crit); font-weight: bold; font-style: italic; }
-    .log-evade { color: var(--evade); font-style: italic; }
-    .skill-enhanced { text-shadow: 0 0 5px #fff; color: white; font-weight: bold; }
-    .skill-burst { text-shadow: 0 0 8px #89b4fa, 0 0 15px #b4befe; color: #e1e6f9; font-weight: bold; font-style: italic; }
-    
-    .stat-text { font-size: 12px; color: #bac2de; line-height: 1.6; background: #11111b; padding: 10px; border-radius: 5px; border: 1px solid #313244;}
-    .stat-title { color: #89b4fa; font-weight: bold; margin-top: 5px; display: inline-block; }
-    
-    /* 추가: 이미지 스프라이트 스타일 */
-    .sprite-box { display: flex; justify-content: center; margin-bottom: 10px; }
-    .sprite { width: 120px; height: 120px; object-fit: contain; filter: drop-shadow(0 0 5px rgba(255,255,255,0.1)); }
+    .skill-enhanced {
+      text-shadow: 0 0 6px #fff, 0 0 12px #ffffff;
+      color: #ffffff;
+      font-weight: 800;
+    }
+    .skill-burst {
+      text-shadow: 0 0 8px #38bdf8, 0 0 15px #0284c7;
+      color: #e0f2fe;
+      font-weight: 800;
+      font-style: italic;
+    }
+    /* Scrollbar Styling */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #1e293b;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #475569;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #64748b;
+    }
   </style>
 </head>
-<body>
+<body class="text-slate-200 min-h-screen flex flex-col">
 
-  <div id="lobby-screen" class="screen active-view">
-    <h1>Pokeraid</h1>
-    
-    <div class="data-panel">
-      <button class="btn-sub" onclick="saveDataLocal()">💾 로컬 저장</button>
-      <button class="btn-sub" onclick="exportDataFile()">📂 데이터 내보내기</button>
-      <button class="btn-sub" onclick="document.getElementById('file-upload').click()">📁 데이터 불러오기</button>
-      <input type="file" id="file-upload" style="display:none;" accept=".txt,.json" onchange="importDataFile(event)">
-      <label style="display:flex; align-items:center; gap:5px; cursor:pointer; color:#fab387; font-weight:bold; margin-left: 10px;">
-        <input type="checkbox" id="skip-battle-chk"> ⚡ 전투 과정 생략 (결과만)
-      </label>
-    </div>
-
-    <div class="lobby-top">
-      <div class="panel player-info-panel">
-        <h2>내 정보</h2>
-        <div class="sprite-box"><img id="lobby-p-img" class="sprite" src="" alt="Player"></div>
-        <div id="player-summary" style="font-size: 14px; line-height: 1.8;"></div>
+  <!-- Navigation Header -->
+  <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-50 px-4 py-3 shadow-lg">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+      <div class="flex items-center gap-3">
+        <div class="bg-sky-500 text-slate-950 font-black px-3 py-1 rounded text-xl tracking-wider shadow-md shadow-sky-500/20">POKERAID</div>
+        <span class="text-xs text-slate-400 font-mono">v1.2.0-Alpha</span>
       </div>
-      <div class="panel story-panel">
-        <h2>스토리 모드 (전투 돌입)</h2>
-        <div id="story-list" class="stage-list"></div>
+      
+      <!-- Quick Info Bar -->
+      <div class="flex items-center gap-4 flex-wrap justify-center">
+        <label class="flex items-center gap-2 cursor-pointer bg-slate-800 hover:bg-slate-750 px-3 py-1.5 rounded-lg border border-slate-700 transition">
+          <input type="checkbox" id="skip-battle-chk" class="rounded text-sky-500 focus:ring-sky-500 bg-slate-900 border-slate-700">
+          <span class="text-xs text-sky-400 font-bold flex items-center gap-1">⚡ 전투 과정 생략 (결과만 즉시 확인)</span>
+        </label>
+        <div class="flex gap-2">
+          <button onclick="saveDataLocal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-3 py-1.5 rounded border border-slate-700 transition">💾 로컬저장</button>
+          <button onclick="exportDataFile()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-3 py-1.5 rounded border border-slate-700 transition">📂 내보내기</button>
+          <button onclick="document.getElementById('file-upload').click()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-3 py-1.5 rounded border border-slate-700 transition">📁 불러오기</button>
+          <input type="file" id="file-upload" style="display:none;" accept=".txt" onchange="importDataFile(event)">
+        </div>
       </div>
     </div>
+  </header>
 
-    <div class="panel ap-wrapper">
-      <div class="ap-info">
-        <span>장착 수용력 (AP)</span>
-        <span id="ap-text">0 / 25 AP</span>
-      </div>
-      <div class="ap-bar-bg"><div id="ap-bar" class="ap-bar-fill" style="width: 0%;"></div></div>
+  <!-- Main Workspace -->
+  <main class="flex-grow max-w-7xl w-full mx-auto p-4 md:p-6 flex flex-col gap-6">
+
+    <!-- LOBBY SCREEN -->
+    <div id="lobby-screen" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      
+      <!-- Left column: Pokémon Switcher & Active Profile -->
+      <section class="lg:col-span-4 flex flex-col gap-6">
+        <!-- Pokémon Squad Selection -->
+        <div class="bg-slate-800/80 backdrop-blur border border-slate-700/50 rounded-2xl p-5 shadow-xl">
+          <h2 class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">보유 포켓몬 선택</h2>
+          <div class="grid grid-cols-3 gap-2" id="pokemon-selector-grid">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- Active Pokémon Profile Detail -->
+        <div class="bg-slate-800/80 backdrop-blur border border-slate-700/50 rounded-2xl p-5 shadow-xl flex-grow flex flex-col">
+          <h2 class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">선택된 포켓몬 프로필</h2>
+          
+          <div class="flex flex-col items-center py-4 bg-slate-900/60 rounded-xl border border-slate-700/30 mb-4 relative overflow-hidden">
+            <div class="absolute top-2 right-2 text-xs font-mono px-2 py-0.5 bg-slate-800 rounded border border-slate-700" id="pkmn-ap-limit">MAX AP: --</div>
+            <!-- Sprite Placeholder with glow effect -->
+            <div class="w-28 h-28 flex items-center justify-center relative mb-2">
+              <div class="absolute inset-0 bg-sky-500/10 rounded-full blur-xl"></div>
+              <img id="lobby-pkmn-sprite" src="" alt="Sprite" class="w-24 h-24 object-contain relative z-10 transition-transform hover:scale-110 duration-200">
+            </div>
+            <h3 class="text-xl font-bold text-white tracking-wide" id="lobby-pkmn-name">--</h3>
+            <div class="text-xs text-sky-400 font-mono mt-1" id="lobby-pkmn-level">Lv. --</div>
+            
+            <!-- EXP Bar -->
+            <div class="w-11/12 mt-4">
+              <div class="flex justify-between text-[10px] font-mono text-slate-400 mb-1">
+                <span>숙련도 (EXP)</span>
+                <span id="lobby-pkmn-exp-text">-- / --</span>
+              </div>
+              <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
+                <div id="lobby-pkmn-exp-bar" class="h-full bg-sky-400 transition-all duration-300" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Base and Computed Combat Stats Panel -->
+          <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+            <div class="bg-slate-900/40 p-2.5 rounded border border-slate-700/30">
+              <div class="text-slate-400 text-[10px] mb-1">기본 능력치</div>
+              <ul class="space-y-1" id="base-stats-list">
+                <!-- Dynamically populated -->
+              </ul>
+            </div>
+            <div class="bg-slate-900/40 p-2.5 rounded border border-slate-700/30">
+              <div class="text-sky-400 text-[10px] mb-1">계산된 전투 능력치</div>
+              <ul class="space-y-1" id="derived-stats-list">
+                <!-- Dynamically populated -->
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Center column: Deck Building & Customizer -->
+      <section class="lg:col-span-5 flex flex-col gap-6">
+        <!-- Capacity Gauge Panel -->
+        <div class="bg-slate-800/80 backdrop-blur border border-slate-700/50 rounded-2xl p-5 shadow-xl">
+          <div class="flex justify-between items-center mb-3">
+            <h2 class="text-sm font-bold text-slate-400 uppercase tracking-widest">장착 수용력 (AP)</h2>
+            <span class="text-lg font-black text-sky-400 font-mono" id="deck-ap-usage">0 / 0 AP</span>
+          </div>
+          <div class="w-full bg-slate-950 h-3.5 rounded-full overflow-hidden border border-slate-800 p-0.5">
+            <div id="deck-ap-bar" class="h-full rounded-full bg-gradient-to-r from-sky-400 to-indigo-500 transition-all duration-300" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <!-- Skills Customization Interface -->
+        <div class="bg-slate-800/80 backdrop-blur border border-slate-700/50 rounded-2xl p-5 shadow-xl flex-grow flex flex-col">
+          <div class="flex justify-between items-center border-b border-slate-700/50 pb-3 mb-4">
+            <h2 class="text-sm font-bold text-white uppercase tracking-wider">보유 중인 능력 리스트</h2>
+            <span class="text-xs text-slate-400">클릭하여 장착/해제</span>
+          </div>
+
+          <!-- Unlocked Skills Grid -->
+          <div class="overflow-y-auto pr-1 flex-grow max-h-[380px]" id="lobby-unlocked-skills-container">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5" id="unlocked-skills-grid">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <div class="border-t border-slate-700/50 pt-4 mt-4">
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">현재 장착 목록</h3>
+            <div class="flex flex-wrap gap-1.5" id="equipped-pills-container">
+              <!-- Dynamically populated pills -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right column: Stage Level Selector & Story Mode -->
+      <section class="lg:col-span-3 flex flex-col gap-6">
+        <div class="bg-slate-800/80 backdrop-blur border border-slate-700/50 rounded-2xl p-5 shadow-xl flex-grow flex flex-col">
+          <h2 class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">스토리 모드 선택</h2>
+          
+          <div class="space-y-3 overflow-y-auto flex-grow max-h-[480px] pr-1" id="lobby-stages-container">
+            <!-- Dynamically populated story nodes -->
+          </div>
+        </div>
+      </section>
+
     </div>
 
-    <div class="deck-container">
-      <div class="panel skill-list-panel">
-        <h2>보유 중인 능력 (클릭하여 장착)</h2>
-        <div id="unlocked-skill-grid" class="skill-grid"></div>
-      </div>
+    <!-- BATTLE SCREEN -->
+    <div id="battle-screen" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6">
+      
+      <!-- Player Unit Panel (Left) -->
+      <section class="lg:col-span-3 bg-slate-800/90 border border-slate-700/60 rounded-2xl p-5 flex flex-col justify-between shadow-xl">
+        <div>
+          <div class="text-xs font-mono font-bold text-sky-400 uppercase tracking-widest mb-1">PLAYER UNIT</div>
+          <h2 class="text-xl font-bold text-white mb-4" id="battle-p-title">--</h2>
+          
+          <div class="bg-slate-900/60 py-5 rounded-xl border border-slate-700/30 flex justify-center mb-4">
+            <img id="battle-p-sprite" src="" alt="Player" class="w-24 h-24 object-contain">
+          </div>
 
-      <div class="panel equipped-panel">
-        <h2>장착된 능력 목록</h2>
-        <div id="equipped-slot-list" class="slot-list"></div>
-      </div>
+          <!-- Player HP Gauge -->
+          <div class="space-y-1 mb-4">
+            <div class="flex justify-between text-xs font-mono">
+              <span class="text-slate-400">NHP / MHP</span>
+              <span class="font-bold text-white" id="battle-p-hp-text">-- / --</span>
+            </div>
+            <div class="w-full bg-slate-950 h-3 rounded-full overflow-hidden border border-slate-800 p-0.5">
+              <div id="battle-p-hp-bar" class="h-full rounded-full bg-emerald-400 transition-all duration-100" style="width: 100%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Derived Stats List -->
+        <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700/30 text-xs font-mono space-y-1.5" id="battle-p-stats-box">
+          <!-- Live Combat Stats -->
+        </div>
+      </section>
+
+      <!-- Center Console: Visual Logs & Return Controls -->
+      <section class="lg:col-span-6 flex flex-col gap-4">
+        <!-- Interactive Combat Console Log Window -->
+        <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4 flex flex-col flex-grow min-h-[400px] shadow-2xl">
+          <div class="flex justify-between items-center border-b border-slate-800 pb-2 mb-3 text-xs font-mono text-slate-500">
+            <span>📟 REALTIME COMBAT TIMELINE LOG</span>
+            <span id="battle-time-elapsed">0.00s / 30.00s</span>
+          </div>
+
+          <div id="battle-log-box" class="flex-grow overflow-y-auto pr-1 space-y-2 text-sm leading-relaxed font-mono max-h-[380px]">
+            <!-- Continuous real-time visual triggers populated here -->
+          </div>
+        </div>
+
+        <!-- Active Return Actions -->
+        <div>
+          <button id="battle-return-btn" onclick="returnToLobby()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3.5 px-6 rounded-xl border border-slate-700 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg" disabled>
+            로비로 돌아가기 (전투가 종료되어야 합니다)
+          </button>
+        </div>
+      </section>
+
+      <!-- Enemy Boss Unit Panel (Right) -->
+      <section class="lg:col-span-3 bg-slate-800/90 border border-slate-700/60 rounded-2xl p-5 flex flex-col justify-between shadow-xl">
+        <div>
+          <div class="text-xs font-mono font-bold text-rose-400 uppercase tracking-widest mb-1">OPPONENT UNIT</div>
+          <h2 class="text-xl font-bold text-white mb-4" id="battle-b-title">--</h2>
+          
+          <div class="bg-slate-900/60 py-5 rounded-xl border border-slate-700/30 flex justify-center mb-4">
+            <img id="battle-b-sprite" src="" alt="Boss" class="w-24 h-24 object-contain">
+          </div>
+
+          <!-- Boss HP Gauge -->
+          <div class="space-y-1 mb-4">
+            <div class="flex justify-between text-xs font-mono">
+              <span class="text-slate-400">NHP / MHP</span>
+              <span class="font-bold text-white" id="battle-b-hp-text">-- / --</span>
+            </div>
+            <div class="w-full bg-slate-950 h-3 rounded-full overflow-hidden border border-slate-800 p-0.5">
+              <div id="battle-b-hp-bar" class="h-full rounded-full bg-rose-400 transition-all duration-100" style="width: 100%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Derived Stats List -->
+        <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700/30 text-xs font-mono space-y-1.5" id="battle-b-stats-box">
+          <!-- Live Combat Stats -->
+        </div>
+      </section>
+
+    </div>
+
+  </main>
+
+  <!-- Interactive Alert Box (No alerts allowed) -->
+  <div id="modal-alert" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-sm w-full shadow-2xl text-center">
+      <div class="w-12 h-12 bg-sky-500/10 rounded-full flex items-center justify-center text-sky-400 text-2xl mx-auto mb-4 font-black">!</div>
+      <p id="modal-alert-msg" class="text-slate-200 mb-6 text-sm font-medium leading-relaxed"></p>
+      <button onclick="closeModalAlert()" class="bg-sky-500 hover:bg-sky-600 text-slate-950 font-bold py-2 px-6 rounded-lg transition text-xs">확인</button>
     </div>
   </div>
 
-  <div id="battle-screen" class="screen">
-    <div class="panel status-panel" id="player-panel">
-      <h2 id="p-name">플레이어</h2>
-      <div class="sprite-box"><img id="battle-p-img" class="sprite" src="" alt="Player"></div>
-      <div class="bar-bg"><div class="hp-bar" id="p-hp-bar" style="width: 100%;"></div></div>
-      <div id="p-stats" class="stat-text"></div>
-    </div>
-
-    <div class="log-container">
-      <div id="log-box"></div>
-      <button id="btn-return" class="btn-main" onclick="returnToLobby()" disabled>로비로 돌아가기</button>
-    </div>
-
-    <div class="panel status-panel" id="boss-panel">
-      <h2 id="b-name">보스</h2>
-      <div class="sprite-box"><img id="battle-b-img" class="sprite" src="" alt="Boss"></div>
-      <div class="bar-bg"><div class="hp-bar" id="b-hp-bar" style="width: 100%;"></div></div>
-      <div id="b-stats" class="stat-text"></div>
-    </div>
-  </div>
+  <footer class="text-center py-6 text-slate-500 text-xs border-t border-slate-900 bg-slate-950/40">
+    © 2026 Pokeraid Battle Systems. Built with responsive client state mechanics.
+  </footer>
 
   <script>
-    const SECRET_KEY = "pokeraid_secure_key_2026"; 
+    const SECRET_KEY = "pokeraid_secure_key_2026";
 
-    // =========================================================================
-    // 1. [JSON 데이터 영역] 
-    // 나중에 이 변수들의 내용을 각각 pokemon.json, enemy.json, skills.json으로 분리 가능
-    // =========================================================================
+    // ==========================================
+    // 1. JSON Databases
+    // ==========================================
     const DATA_POKEMON = {
       'Pikachu': {
         name: "피카츄",
         base: { HP: 35, Attack: 55, SpAtk: 40, Defense: 50, SpDef: 50, Speed: 90 },
         p_stats: { pHP: 0, pPA: 0, pMA: 0, pPD: 0, pMD: 0, pAR: 0 },
-        inherent: { CT: 10, CD: 0, AV: 5, EXPR: 0 }
+        inherent: { CT: 10, CD: 0, AV: 5, EXPR: 0 },
+        maxAp: 15,
+        sprite: "Pikachu"
+      },
+      'Snivy': {
+        name: "주리비얀",
+        base: { HP: 45, Attack: 45, SpAtk: 55, Defense: 45, SpDef: 55, Speed: 63 },
+        p_stats: { pHP: 0, pPA: 0, pMA: 0, pPD: 0, pMD: 0, pAR: 1 },
+        inherent: { CT: 15, CD: 20, AV: 8, EXPR: 1 },
+        maxAp: 20,
+        sprite: "Snivy"
+      },
+      'Serperior': {
+        name: "샤로다",
+        base: { HP: 75, Attack: 75, SpAtk: 95, Defense: 75, SpDef: 95, Speed: 113 },
+        p_stats: { pHP: 10, pPA: 15, pMA: 20, pPD: 5, pMD: 5, pAR: 10 },
+        inherent: { CT: 20, CD: 50, AV: 10, EXPR: 4 },
+        maxAp: 50,
+        sprite: "Serperior"
       }
     };
 
     const DATA_ENEMY = [
-      { id: 'stage1', name: "1.피", enemySpecies: 'Pikachu', Lv: 1, skills: ['tackle', 'quick_attack', 'keen_eye'], 
-        add_p: { pHP: 10, pPA: 0, pMA: 0, pPD: 0, pMD: 0, pAR: -1 }, add_i: { CT: 0, CD: 0, AV: 0 }, rewardEXP: 100 },
-      { id: 'stage2', name: "2.카", enemySpecies: 'Pikachu', Lv: 10, skills: ['tackle', 'quick_attack', 'keen_eye'], 
-        add_p: { pHP: 30, pPA: 0, pMA: 0, pPD: 0, pMD: 0, pAR: 0 }, add_i: { CT: 0, CD: 0, AV: 0 }, rewardEXP: 120 },
-      { id: 'stage3', name: "3.츄", enemySpecies: 'Pikachu', Lv: 20, skills: ['tackle', 'quick_attack', 'keen_eye'], 
-        add_p: { pHP: 50, pPA: 0, pMA: 0, pPD: 0, pMD: 0, pAR: 1 }, add_i: { CT: 0, CD: 0, AV: 0 }, rewardEXP: 150 },
-      { id: 'stage4', name: "4.피카츄", enemySpecies: 'Pikachu', Lv: 50, skills: ['tackle', 'extreme_speed', 'keen_eye'], 
-        add_p: { pHP: 100, pPA: 0, pMA: 0, pPD: 0, pMD: 0, pAR: 2 }, add_i: { CT: 0, CD: 0, AV: 0 }, rewardEXP: 200 },
-      { id: 'stage5', name: "5.픽하휴", enemySpecies: 'Pikachu', Lv: 100, skills: ['tackle', 'quick_attack', 'extreme_speed', 'keen_eye'], 
-        add_p: { pHP: 250, pPA: 0, pMA: 0, pPD: 0, pMD: 0, pAR: 5 }, add_i: { CT: 0, CD: 0, AV: 0 }, rewardEXP: 500 }
+      {
+        id: '1-1',
+        storyName: "모시모시",
+        enemyName: "뭔가 잘못 먹은 피카츄",
+        enemySpecies: 'Pikachu',
+        Lv: 1,
+        skills: ['tackle'],
+        add_p: { pHP: 0, pPA: 0, pMA: 0, pPD: 0, pMD: 0, pAR: -2 },
+        add_i: { CT: 0, CD: 0, AV: 0 },
+        rewardEXP: 100
+      },
+      {
+        id: '1-2',
+        storyName: "적응기",
+        enemyName: "체한 피카츄",
+        enemySpecies: 'Pikachu',
+        Lv: 10,
+        skills: ['tackle', 'quick_attack', 'keen_eye'],
+        add_p: { pHP: 30, pPA: 0, pMA: 0, pPD: 0, pMD: 0, pAR: 0 },
+        add_i: { CT: 0, CD: 0, AV: 0 },
+        rewardEXP: 120
+      },
+      {
+        id: '1-3',
+        storyName: "분열기",
+        enemyName: "속이 영 좋지 않은 피카츄",
+        enemySpecies: 'Pikachu',
+        Lv: 20,
+        skills: ['tackle', 'quick_attack', 'keen_eye'],
+        add_p: { pHP: 50, pPA: 0, pMA: 0, pPD: 0, pMD: 0, pAR: 1 },
+        add_i: { CT: 0, CD: 0, AV: 0 },
+        rewardEXP: 150
+      },
+      {
+        id: '1-4',
+        storyName: "제 2 감수분열기",
+        enemyName: "평범한 픽하휴",
+        enemySpecies: 'Pikachu',
+        Lv: 50,
+        skills: ['tackle', 'extreme_speed', 'keen_eye'],
+        add_p: { pHP: 100, pPA: 0, pMA: 0, pPD: 0, pMD: 0, pAR: 2 },
+        add_i: { CT: 0, CD: 0, AV: 0 },
+        rewardEXP: 200
+      },
+      {
+        id: '1-5',
+        storyName: "제 3 감수분열",
+        enemyName: "???",
+        enemySpecies: 'Snivy',
+        Lv: 100,
+        skills: ['tackle', 'quick_attack', 'extreme_speed', 'keen_eye'],
+        add_p: { pHP: 200, pPA: 0, pMA: 0, pPD: 0, pMD: 0, pAR: 5 },
+        add_i: { CT: 0, CD: 0, AV: 0 },
+        rewardEXP: 500
+      }
     ];
 
     const DATA_SKILL = {
@@ -204,18 +386,36 @@
       'tackle': { name: "몸통박치기", type: 'basic', ap: 1 }
     };
 
-    // =========================================================================
-    // 2. [기믹 엔진 (Gimmick Engine)] 
-    // 자주 쓰이는 전투 로직(데미지, 스택, 딜레이)을 함수화하여 새로운 능력 추가를 쉽게 만듦
-    // =========================================================================
+    // ==========================================
+    // 2. Math Calculations Engine
+    // ==========================================
+    const f = (m, n, x) => (m * x) / (n + x);
+    const h = (k, x) => 0.2 + (3.8 * x) / (x + k);
+    const g = (x) => 70 + 530 / (1 + Math.pow(x / 300, 0.6));
+    const k_fn = (x) => 320 * (x / (x + 180)) + 6.8 * Math.pow(x, 0.5);
+
+    // EXP REXP Formula
+    function getREXP(Lv, EXPR) {
+      return Math.pow(100 + Lv, 2 + EXPR) / Math.pow(100, 1 + EXPR);
+    }
+
+    // ==========================================
+    // 3. Gimmick Engine Mechanics
+    // ==========================================
     const Gimmick = {
       attack: (attacker, defender, baseDamage, dmgType) => {
+        // Absolute damage ignores PD, MD, AV, and cannot Crit
         let isAdmg = (dmgType === 'Admg');
-        if (!isAdmg && Math.random() * 100 < defender.AV) return { dmg: 0, msg: `<span class="log-evade">적중 실패! (회피당함)</span>` };
+        if (!isAdmg && Math.random() * 100 < defender.AV) {
+          return { dmg: 0, msg: `<span class="log-evade">적중 실패! (회피당함)</span>` };
+        }
         
         let finalDamage = baseDamage;
-        if (dmgType === 'Pdmg') finalDamage *= (100 - Math.min(100, defender.PD)) / 100;
-        else if (dmgType === 'Mdmg') finalDamage *= (100 - Math.min(100, defender.MD)) / 100;
+        if (dmgType === 'Pdmg') {
+          finalDamage *= (100 - Math.min(100, defender.PD)) / 100;
+        } else if (dmgType === 'Mdmg') {
+          finalDamage *= (100 - Math.min(100, defender.MD)) / 100;
+        }
 
         let isCrit = false;
         if (!isAdmg && Math.random() * 100 < attacker.CT) {
@@ -225,25 +425,37 @@
         
         finalDamage = Math.max(1, Math.floor(finalDamage)); 
         defender.NHP -= finalDamage;
+        
         let msg = `적에게 <span class="log-dmg">${finalDamage}</span> 피해! <span style="font-size:11px; color:#a6adc8;">[${dmgType}]</span>`;
         if (isCrit) msg += ` <span class="log-crit">(치명타!)</span>`;
+        
         return { dmg: finalDamage, msg: msg };
       },
-      addStack: (entity, stackName, max) => { entity.buffs[stackName] = Math.min((entity.buffs[stackName] || 0) + 1, max); },
+      addStack: (entity, stackName, max) => {
+        entity.buffs[stackName] = Math.min((entity.buffs[stackName] || 0) + 1, max);
+      },
       getStack: (entity, stackName) => entity.buffs[stackName] || 0,
       clearStack: (entity, stackName) => { entity.buffs[stackName] = 0; },
-      recoilMHP: (entity, percent) => { let dmg = entity.MHP * (percent/100); entity.NHP -= dmg; return Math.floor(dmg); },
-      addDelay: (entity, multiplier) => { entity.nextDelayOverride = entity.DLY + (entity.DLY * multiplier); },
-      setDelay: (entity, fixedMs) => { entity.nextDelayOverride = fixedMs; },
-      reduceDelay: (entity, multiplier) => { entity.nextDelayOverride = entity.DLY - (entity.DLY * multiplier); }
+      recoilMHP: (entity, percent) => {
+        let dmg = entity.MHP * (percent / 100);
+        entity.NHP -= dmg;
+        return Math.floor(dmg);
+      },
+      addDelay: (entity, multiplier) => {
+        entity.nextDelayOverride = entity.DLY + (entity.DLY * multiplier);
+      },
+      setDelay: (entity, fixedMs) => {
+        entity.nextDelayOverride = fixedMs;
+      },
+      reduceDelay: (entity, multiplier) => {
+        entity.nextDelayOverride = entity.DLY - (entity.DLY * multiplier);
+      }
     };
 
-    // =========================================================================
-    // 3. [능력 로직 레지스트리 (Logic Registry)]
-    // 각 스킬의 텍스트 설명과 고유 실행(execute), 패시브 적용(apply) 로직 정의
-    // =========================================================================
+    // ==========================================
+    // 4. Logic Skill Map Execution Functions
+    // ==========================================
     const LOGIC_SKILL = {
-      // --- 액티브 ---
       'nitro_charge': {
         desc: "MA*1.2 Mdmg, 화염스택 1생성(최대8), 스택당 계수 0.1증가",
         execute: (c, t) => {
@@ -268,14 +480,16 @@
         desc: "PA*0.5 Pdmg, 즉행동(다음 DLY 5ms)",
         execute: (c, t) => {
           let res = Gimmick.attack(c, t, c.PA * 0.5, 'Pdmg');
-          Gimmick.setDelay(c, 5); return `신속 발동! ${res.msg} (즉행동)`;
+          Gimmick.setDelay(c, 5);
+          return `신속 발동! ${res.msg} (즉행동)`;
         }
       },
       'quick_attack': {
         desc: "PA*0.7 Pdmg, 다음 자신 DLY 0.7배 감소",
         execute: (c, t) => {
           let res = Gimmick.attack(c, t, c.PA * 0.7, 'Pdmg');
-          Gimmick.reduceDelay(c, 0.7); return `전광석화! ${res.msg} (행동 단축)`;
+          Gimmick.reduceDelay(c, 0.7);
+          return `전광석화! ${res.msg} (행동 단축)`;
         }
       },
       'self_destruct': {
@@ -284,31 +498,39 @@
         execute: (c, t) => {
           let res = Gimmick.attack(c, t, c.PA * 15, 'Pdmg');
           let recoil = Gimmick.recoilMHP(c, 30);
-          Gimmick.addDelay(c, 3); return `💥자폭!! ${res.msg} [반동 ${recoil}, 딜레이 증가]`;
+          Gimmick.addDelay(c, 3);
+          return `💥자폭!! ${res.msg} [반동 ${recoil}, 딜레이 증가]`;
         }
       },
       'iron_defense': {
-        desc: "PD 5만큼 증가", execute: (c, t) => { c.PD += 5; return `🛡️철벽! 방어력(PD) 5 증가.`; }
+        desc: "PD 5만큼 증가",
+        execute: (c, t) => {
+          c.PD += 5;
+          return `🛡️철벽! 방어력(PD) 5 증가.`;
+        }
       },
       'fake_out': {
         desc: "PA*1 Idmg, 상대 다음 DLY에 DLY*2 추가",
         execute: (c, t) => {
           let res = Gimmick.attack(c, t, c.PA * 1, 'Idmg');
-          Gimmick.addDelay(t, 2); return `속이기! ${res.msg} (상대 지연)`;
+          Gimmick.addDelay(t, 2);
+          return `속이기! ${res.msg} (상대 지연)`;
         }
       },
       'hyper_beam': {
         desc: "MA*5 Pdmg, 자신 다음 DLY 1.5배 추가",
         execute: (c, t) => {
           let res = Gimmick.attack(c, t, c.MA * 5, 'Pdmg');
-          Gimmick.addDelay(c, 1.5); return `파괴광선! ${res.msg} (딜레이 증가)`;
+          Gimmick.addDelay(c, 1.5);
+          return `파괴광선! ${res.msg} (딜레이 증가)`;
         }
       },
       'giga_impact': {
         desc: "PA*5 Pdmg, 자신 다음 DLY 1.5배 추가",
         execute: (c, t) => {
           let res = Gimmick.attack(c, t, c.PA * 5, 'Pdmg');
-          Gimmick.addDelay(c, 1.5); return `기가임팩트! ${res.msg} (딜레이 증가)`;
+          Gimmick.addDelay(c, 1.5);
+          return `기가임팩트! ${res.msg} (딜레이 증가)`;
         }
       },
       'icy_wind': {
@@ -316,16 +538,19 @@
         execute: (c, t) => {
           let stack = Gimmick.getStack(c, 'ice');
           let res = Gimmick.attack(c, t, c.MA * (2 + stack * 0.2), 'Admg');
-          t.p_stats.pMD -= 1; t.AV -= 1; t.MD = Math.max(1, t.MD - 1); // 실시간 스탯 반영 보정
-          Gimmick.addStack(c, 'ice', 4); return `❄️얼다바람! ${res.msg} (적 특방/회피 감소)`;
+          t.p_stats.pMD -= 1;
+          t.AV -= 1;
+          t.MD = Math.max(1, t.MD - 1); // 실시간 스탯 반영 보정
+          Gimmick.addStack(c, 'ice', 4);
+          return `❄️얼다바람! ${res.msg} (적 특방/회피 감소)`;
         }
       },
-      // --- 강화 액티브 ---
       'enhanced_extreme_speed': {
         desc: "공명: PA*1.2 Pdmg, 즉행동",
         execute: (c, t) => {
           let res = Gimmick.attack(c, t, c.PA * 1.2, 'Pdmg');
-          Gimmick.setDelay(c, 5); return `<span class='skill-enhanced'>신속</span> 발동! ${res.msg}`;
+          Gimmick.setDelay(c, 5);
+          return `<span class='skill-enhanced'>신속</span> 발동! ${res.msg}`;
         }
       },
       'burst_stream': {
@@ -339,385 +564,816 @@
           return `<span class='skill-burst'>버스트 스트림!!</span> 연속 타격!<br>&nbsp;&nbsp;├ 1타: ${r1.msg}<br>&nbsp;&nbsp;├ 2타: ${r2.msg}<br>&nbsp;&nbsp;├ 3타: ${r3.msg}<br>&nbsp;&nbsp;└ 4타: ${r4.msg}`;
         }
       },
-      // --- 패시브 ---
-      'sheer_force': { desc: "pHP -10, pPA +20", apply: (c) => { c.p_stats.pHP -= 10; c.p_stats.pPA += 20; } },
-      'keen_eye': { desc: "CT +4", apply: (c) => { c.inherent.CT += 4; } },
-      'heatproof': { desc: "pMD +3, pMA +10", apply: (c) => { c.p_stats.pMD += 3; c.p_stats.pMA += 10; } },
-      'levitate': { desc: "pAR +2, AV +3", apply: (c) => { c.p_stats.pAR += 2; c.inherent.AV += 3; } },
-      // --- 기본 ---
-      'tackle': { desc: "PA*1 Pdmg", execute: (c, t) => { let res = Gimmick.attack(c, t, c.PA * 1, 'Pdmg'); return `몸통박치기! ${res.msg}`; } }
+      'sheer_force': {
+        desc: "pHP -10, pPA +20",
+        apply: (c) => {
+          c.p_stats.pHP -= 10;
+          c.p_stats.pPA += 20;
+        }
+      },
+      'keen_eye': {
+        desc: "CT +4",
+        apply: (c) => {
+          c.inherent.CT += 4;
+        }
+      },
+      'heatproof': {
+        desc: "pMD +3, pMA +10",
+        apply: (c) => {
+          c.p_stats.pMD += 3;
+          c.p_stats.pMA += 10;
+        }
+      },
+      'levitate': {
+        desc: "pAR +2, AV +3",
+        apply: (c) => {
+          c.p_stats.pAR += 2;
+          c.inherent.AV += 3;
+        }
+      },
+      'tackle': {
+        desc: "PA*1 Pdmg",
+        execute: (c, t) => {
+          let res = Gimmick.attack(c, t, c.PA * 1, 'Pdmg');
+          return `몸통박치기! ${res.msg}`;
+        }
+      }
     };
 
-    // JSON 데이터와 로직 합치기 (최종 DB)
+    // Fully synthesize the databases together
     const SKILLS_DB = {};
-    for(let key in DATA_SKILL) { SKILLS_DB[key] = { ...DATA_SKILL[key], ...LOGIC_SKILL[key] }; }
+    for (let key in DATA_SKILL) {
+      SKILLS_DB[key] = {
+        ...DATA_SKILL[key],
+        ...LOGIC_SKILL[key]
+      };
+    }
 
-    // =========================================================================
-    // 4. [코어 엔진 (Core Engine)] - 수학 함수 및 스탯 계산
-    // =========================================================================
-    const f = (m, n, x) => (m * x) / (n + x);
-    const h = (k, x) => 0.2 + (3.8 * x) / (x + k);
-    const g = (x) => 70 + 530 / (1 + Math.pow(x / 300, 0.6));
-    const k_fn = (x) => 320 * (x / (x + 180)) + 6.8 * Math.pow(x, 0.5);
-
-    function getREXP(Lv, EXPR) { return Math.pow(100 + Lv, 2 + EXPR) / Math.pow(100, 1 + EXPR); }
-
+    // ==========================================
+    // 5. Active Player Session State
+    // ==========================================
     let playerData = {
-      pokemon: "Pikachu", Lv: 1, EXP: 0, maxAp: 25,
-      unlockedSkills: Object.keys(SKILLS_DB),
-      equipped: ['tackle']
+      currentPokemon: "Pikachu",
+      pokemons: {
+        'Pikachu': { Lv: 1, EXP: 0, equipped: ['tackle'] },
+        'Snivy': { Lv: 1, EXP: 0, equipped: ['tackle'] },
+        'Serperior': { Lv: 1, EXP: 0, equipped: ['tackle'] }
+      },
+      unlockedSkills: Object.keys(SKILLS_DB)
     };
 
-    let combatPlayer, combatBoss;
+    let combatPlayer = null;
+    let combatBoss = null;
     let isBattleActive = false;
-    let logBuffer = []; 
+    let battleTimers = [];
+    let logBuffer = [];
     let selectedRewardEXP = 0;
 
-    // --- 에셋(Asset) 렌더링 도우미 ---
-    function loadSprite(imgElementId, pkmnName) {
-      const img = document.getElementById(imgElementId);
-      // github pages 기준 asset/image/ 폴더 탐색. 없으면 placehold.co 렌더링
-      img.onerror = () => { img.src = `https://placehold.co/120x120/1e1e2e/89b4fa?text=${pkmnName}`; };
-      img.src = `asset/image/${pkmnName}.png`;
+    // Placeholders for visual sprites using un-embedded clean fallbacks
+    function getFallbackSpriteUrl(name) {
+      return `https://placehold.co/120x120/1e293b/89b4fa?text=${encodeURIComponent(name)}`;
     }
 
-    function getEncryptedSaveData() { return CryptoJS.AES.encrypt(JSON.stringify(playerData), SECRET_KEY).toString(); }
-    function applyEncryptedSaveData(encryptedData) {
+    // ==========================================
+    // 6. Encrypted Save Engine Mechanics
+    // ==========================================
+    function getEncryptedSaveData() {
+      return CryptoJS.AES.encrypt(JSON.stringify(playerData), SECRET_KEY).toString();
+    }
+
+    function applyEncryptedSaveData(encrypted) {
       try {
-        const bytes = CryptoJS.AES.decrypt(encryptedData, SECRET_KEY);
-        const decryptedStr = bytes.toString(CryptoJS.enc.Utf8);
-        if (!decryptedStr) throw new Error("Decryption failed");
-        playerData = Object.assign(playerData, JSON.parse(decryptedStr));
-        updateLobbyUI(); alert("데이터를 성공적으로 불러왔습니다!");
-      } catch (e) { alert("세이브 데이터가 손상되었거나 유효하지 않습니다."); }
+        const bytes = CryptoJS.AES.decrypt(encrypted, SECRET_KEY);
+        const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+        if (!decrypted) throw new Error("Decryption returned empty string");
+        
+        let loaded = JSON.parse(decrypted);
+        // Soft fallback validation for missing pokemons inside save files
+        if (!loaded.pokemons) {
+          loaded.pokemons = {
+            'Pikachu': { Lv: 1, EXP: 0, equipped: ['tackle'] },
+            'Snivy': { Lv: 1, EXP: 0, equipped: ['tackle'] },
+            'Serperior': { Lv: 1, EXP: 0, equipped: ['tackle'] }
+          };
+        }
+        if (!loaded.currentPokemon) loaded.currentPokemon = "Pikachu";
+        if (!loaded.unlockedSkills) loaded.unlockedSkills = Object.keys(SKILLS_DB);
+
+        playerData = loaded;
+        updateLobbyUI();
+        triggerModalAlert("💾 성공적으로 세이브 데이터를 불러왔습니다.");
+      } catch (e) {
+        triggerModalAlert("⚠️ 데이터 해독 또는 파싱에 실패했습니다. 올바른 세이브 파일인지 확인해 주세요.");
+      }
     }
-    function saveDataLocal() { localStorage.setItem("pokeraid_save_v3", getEncryptedSaveData()); alert("저장 완료."); }
-    function loadDataLocal() { const data = localStorage.getItem("pokeraid_save_v3"); if (data) applyEncryptedSaveData(data); }
+
+    function saveDataLocal() {
+      localStorage.setItem("pokeraid_save_encrypted_v4", getEncryptedSaveData());
+      triggerModalAlert("💾 로컬 저장소에 암호화 저장이 완료되었습니다.");
+    }
+
+    function loadDataLocal() {
+      const data = localStorage.getItem("pokeraid_save_encrypted_v4");
+      if (data) {
+        try {
+          const bytes = CryptoJS.AES.decrypt(data, SECRET_KEY);
+          const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+          if (decrypted) {
+            playerData = JSON.parse(decrypted);
+          }
+        } catch (e) {
+          console.warn("로컬 세이브 자동 로딩 오류:", e);
+        }
+      }
+    }
+
     function exportDataFile() {
+      const encrypted = getEncryptedSaveData();
+      const blob = new Blob([encrypted], { type: 'text/plain' });
       const a = document.createElement('a');
-      a.href = window.URL.createObjectURL(new Blob([getEncryptedSaveData()], { type: 'text/plain' }));
-      a.download = 'pokeraid_save.txt'; a.click();
+      a.href = URL.createObjectURL(blob);
+      a.download = `pokeraid_save_${playerData.currentPokemon}.txt`;
+      a.click();
     }
+
     function importDataFile(event) {
-      const file = event.target.files[0]; if (!file) return;
+      const file = event.target.files[0];
+      if (!file) return;
       const reader = new FileReader();
-      reader.onload = (e) => { applyEncryptedSaveData(e.target.result); event.target.value = ''; };
+      reader.onload = function(e) {
+        applyEncryptedSaveData(e.target.result);
+        event.target.value = ''; // Reset input element
+      };
       reader.readAsText(file);
     }
 
+    // ==========================================
+    // 7. Render UI Managers
+    // ==========================================
     function updateLobbyUI() {
-      const pkmn = DATA_POKEMON[playerData.pokemon];
-      let rexp = getREXP(playerData.Lv, pkmn.inherent.EXPR);
-      let expPercent = Math.min(100, (playerData.EXP / rexp) * 100);
+      const activeName = playerData.currentPokemon;
+      const pkmnObj = playerData.pokemons[activeName];
+      const activeStatic = DATA_POKEMON[activeName];
       
-      loadSprite('lobby-p-img', pkmn.name);
+      // Selectors rendering
+      const selectorGrid = document.getElementById('pokemon-selector-grid');
+      selectorGrid.innerHTML = '';
+      for (let key in DATA_POKEMON) {
+        const specs = DATA_POKEMON[key];
+        const currentData = playerData.pokemons[key];
+        const isSelected = (key === activeName);
+        
+        const btn = document.createElement('button');
+        btn.className = `flex flex-col items-center p-3 rounded-xl border transition-all ${
+          isSelected 
+            ? 'bg-sky-500/10 border-sky-400 text-sky-400 font-extrabold shadow-lg shadow-sky-400/15' 
+            : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-300'
+        }`;
+        btn.onclick = () => { selectActivePokemon(key); };
+        btn.innerHTML = `
+          <span class="text-xs uppercase font-mono">Lv.${currentData.Lv}</span>
+          <span class="text-sm tracking-wide font-semibold truncate w-full text-center mt-1">${specs.name}</span>
+        `;
+        selectorGrid.appendChild(btn);
+      }
 
-      document.getElementById('player-summary').innerHTML = `
-        <strong>종족:</strong> ${pkmn.name}<br>
-        <strong>레벨:</strong> Lv.${playerData.Lv}<br>
-        <strong>EXP:</strong> ${Math.floor(playerData.EXP)} / ${Math.floor(rexp)}
-        <div class="exp-bar-bg"><div class="exp-bar-fill" style="width: ${expPercent}%;"></div></div>
-        <hr style="border-color:#444; margin:10px 0;">
-        <strong>기본 스탯:</strong><br>
-        HP:${pkmn.base.HP} | Atk:${pkmn.base.Attack} | SpA:${pkmn.base.SpAtk}<br>
-        Def:${pkmn.base.Defense} | SpD:${pkmn.base.SpDef} | Spd:${pkmn.base.Speed}
+      // Profile details rendering
+      document.getElementById('lobby-pkmn-name').innerText = activeStatic.name;
+      document.getElementById('lobby-pkmn-level').innerText = `Lv.${pkmnObj.Lv}`;
+      document.getElementById('lobby-pkmn-sprite').src = getFallbackSpriteUrl(activeStatic.sprite);
+      document.getElementById('pkmn-ap-limit').innerText = `MAX AP: ${activeStatic.maxAp}`;
+
+      // EXP calculation and bar
+      const rexp = getREXP(pkmnObj.Lv, activeStatic.inherent.EXPR);
+      const expPercent = Math.min(100, (pkmnObj.EXP / rexp) * 100);
+      document.getElementById('lobby-pkmn-exp-text').innerText = `${Math.floor(pkmnObj.EXP)} / ${Math.floor(rexp)}`;
+      document.getElementById('lobby-pkmn-exp-bar').style.width = `${expPercent}%`;
+
+      // Derived live temporary preview entity to compute derived stats list
+      let tempEntity = buildCombatEntity(true);
+      calculateEntityStats(tempEntity);
+
+      // Base stats rendering
+      const baseStatsList = document.getElementById('base-stats-list');
+      baseStatsList.innerHTML = `
+        <li>HP: <span class="text-white">${activeStatic.base.HP}</span></li>
+        <li>물리공격: <span class="text-white">${activeStatic.base.Attack}</span></li>
+        <li>특수공격: <span class="text-white">${activeStatic.base.SpAtk}</span></li>
+        <li>물리방어: <span class="text-white">${activeStatic.base.Defense}</span></li>
+        <li>특수방어: <span class="text-white">${activeStatic.base.SpDef}</span></li>
+        <li>기본속도: <span class="text-white">${activeStatic.base.Speed}</span></li>
       `;
 
-      const storyList = document.getElementById('story-list');
-      storyList.innerHTML = '';
-      DATA_ENEMY.forEach(stage => {
-        const item = document.createElement('div');
-        item.className = 'stage-item';
-        item.innerHTML = `
-          <div>
-            <div class="stage-title">${stage.name} (Lv.${stage.Lv})</div>
-            <div class="stage-reward">승리 시 EXP +${stage.rewardEXP}</div>
-          </div>
-          <button class="btn-sub" style="background:#89b4fa; color:#111; border:none; font-weight:bold;" onclick="prepareBattle('${stage.id}')">전투 시작</button>
-        `;
-        storyList.appendChild(item);
-      });
+      // Derived combat stats rendering
+      const derivedStatsList = document.getElementById('derived-stats-list');
+      derivedStatsList.innerHTML = `
+        <li>MHP: <span class="text-white">${tempEntity.MHP}</span></li>
+        <li>PA: <span class="text-white">${tempEntity.PA.toFixed(1)}</span></li>
+        <li>MA: <span class="text-white">${tempEntity.MA.toFixed(1)}</span></li>
+        <li>PD: <span class="text-white">${tempEntity.PD.toFixed(1)}%</span></li>
+        <li>MD: <span class="text-white">${tempEntity.MD.toFixed(1)}%</span></li>
+        <li>DLY: <span class="text-white">${tempEntity.DLY.toFixed(1)}ms</span></li>
+      `;
 
-      let currentAp = playerData.equipped.reduce((sum, id) => sum + (SKILLS_DB[id]?.ap || 0), 0);
-      document.getElementById('ap-text').innerText = `${currentAp} / ${playerData.maxAp} AP`;
-      document.getElementById('ap-bar').style.width = Math.min(100, (currentAp / playerData.maxAp) * 100) + '%';
-      document.getElementById('ap-bar').style.backgroundColor = currentAp > playerData.maxAp ? '#f38ba8' : 'var(--ap-color)';
+      // Update AP gauge usage
+      let currentApUsed = pkmnObj.equipped.reduce((sum, id) => sum + (SKILLS_DB[id]?.ap || 0), 0);
+      document.getElementById('deck-ap-usage').innerText = `${currentApUsed} / ${activeStatic.maxAp} AP`;
+      
+      const apBarPercent = Math.min(100, (currentApUsed / activeStatic.maxAp) * 100);
+      const apBar = document.getElementById('deck-ap-bar');
+      apBar.style.width = `${apBarPercent}%`;
+      if (currentApUsed > activeStatic.maxAp) {
+        apBar.className = "h-full rounded-full bg-gradient-to-r from-red-500 to-rose-600 transition-all duration-300";
+      } else {
+        apBar.className = "h-full rounded-full bg-gradient-to-r from-sky-400 to-indigo-500 transition-all duration-300";
+      }
 
-      const grid = document.getElementById('unlocked-skill-grid');
-      grid.innerHTML = '';
+      // Render Unlocked Grid
+      const unlockedGrid = document.getElementById('unlocked-skills-grid');
+      unlockedGrid.innerHTML = '';
       playerData.unlockedSkills.forEach(id => {
         const skill = SKILLS_DB[id];
-        if(skill.type === 'enhanced') return; // 강화 액티브는 리스트에서 숨김 (장착 불가)
-        if(skill.ap === 0 && skill.chance !== 100 && id !== 'tackle' && id !== 'nitro_charge' && !skill.desc) return; // Hide internal
-        const isEquipped = playerData.equipped.includes(id);
-        const card = document.createElement('div');
-        card.className = `skill-card ${isEquipped ? 'equipped' : ''}`;
-        let typeText = skill.type === 'passive' ? '패시브' : (skill.type === 'basic' ? '기본' : '액티브');
-        card.innerHTML = `<div class="skill-name">${skill.name} <span style="font-size:10px; color:#a6adc8;">[${typeText}]</span></div>
-                          <div class="skill-ap">소모 AP: ${skill.ap}</div>
-                          <div class="skill-desc">${skill.desc}</div>`;
-        card.onclick = () => isEquipped ? unequipSkill(id) : equipSkill(id);
-        grid.appendChild(card);
+        if (skill.type === 'enhanced') return; // Hide internal fusion constructs
+        
+        const isEquipped = pkmnObj.equipped.includes(id);
+        const card = document.createElement('button');
+        card.className = `p-3 rounded-xl border text-left flex flex-col justify-between transition relative overflow-hidden ${
+          isEquipped 
+            ? 'bg-emerald-950/40 border-emerald-500 hover:border-emerald-400' 
+            : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
+        }`;
+        card.onclick = () => { toggleEquipSkill(id); };
+
+        let typeLabel = "액티브";
+        let typeColor = "text-sky-400 bg-sky-950/60";
+        if (skill.type === 'passive') {
+          typeLabel = "패시브";
+          typeColor = "text-amber-400 bg-amber-950/60";
+        } else if (skill.type === 'basic') {
+          typeLabel = "기본";
+          typeColor = "text-purple-400 bg-purple-950/60";
+        }
+
+        card.innerHTML = `
+          <div class="flex justify-between items-start gap-2 w-full mb-1">
+            <span class="text-sm font-semibold text-white truncate">${skill.name}</span>
+            <span class="text-[9px] font-bold px-1.5 py-0.5 rounded ${typeColor} uppercase tracking-wider shrink-0">${typeLabel}</span>
+          </div>
+          <div class="text-[10px] text-slate-400 line-clamp-2 mt-1 leading-normal">${skill.desc}</div>
+          <div class="text-[10px] text-slate-300 font-mono mt-2 flex justify-between items-center w-full">
+            <span>AP: <b class="text-sky-400 font-bold">${skill.ap}</b></span>
+            ${isEquipped ? '<span class="text-emerald-400 text-[10px] font-bold">장착됨</span>' : ''}
+          </div>
+        `;
+        unlockedGrid.appendChild(card);
       });
 
-      const slotList = document.getElementById('equipped-slot-list');
-      slotList.innerHTML = '';
-      if (playerData.equipped.length === 0) slotList.innerHTML = '<div class="slot-item" style="color:#777; justify-content:center;">장착된 능력이 없습니다.</div>';
-      else {
-        playerData.equipped.forEach(id => {
-          const item = document.createElement('div');
-          item.className = 'slot-item filled';
-          item.innerHTML = `<div><strong>${SKILLS_DB[id].name}</strong> <span style="color:var(--ap-color); font-size:12px;">(${SKILLS_DB[id].ap} AP)</span></div>
-                            <button class="btn-remove" onclick="unequipSkill('${id}')">해제</button>`;
-          slotList.appendChild(item);
+      // Render pills underneath
+      const pillContainer = document.getElementById('equipped-pills-container');
+      pillContainer.innerHTML = '';
+      if (pkmnObj.equipped.length === 0) {
+        pillContainer.innerHTML = '<span class="text-xs text-slate-500 font-mono">장착된 능력이 없습니다.</span>';
+      } else {
+        pkmnObj.equipped.forEach(id => {
+          const skill = SKILLS_DB[id];
+          const pill = document.createElement('span');
+          pill.className = "inline-flex items-center gap-1.5 bg-slate-900 border border-slate-700 text-slate-300 text-xs px-2.5 py-1 rounded-full font-mono";
+          pill.innerHTML = `
+            <span>${skill.name}</span>
+            <button onclick="event.stopPropagation(); unequipSkillDirect('${id}')" class="text-rose-400 hover:text-rose-300 font-bold ml-1">×</button>
+          `;
+          pillContainer.appendChild(pill);
         });
       }
+
+      // Render Story Stage List
+      const stageContainer = document.getElementById('lobby-stages-container');
+      stageContainer.innerHTML = '';
+      DATA_ENEMY.forEach(stage => {
+        const card = document.createElement('div');
+        card.className = "bg-slate-900/60 border border-slate-800 rounded-xl p-4 flex flex-col gap-3 hover:border-slate-700 transition";
+        
+        const enemyStatic = DATA_POKEMON[stage.enemySpecies];
+        
+        card.innerHTML = `
+          <div class="flex justify-between items-start">
+            <div>
+              <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-sky-950 text-sky-400 font-mono uppercase tracking-wider mb-1 inline-block">STAGE ${stage.id}</span>
+              <h3 class="text-sm font-semibold text-white tracking-wide">${stage.storyName}</h3>
+            </div>
+            <span class="text-xs font-mono text-emerald-400 font-semibold">+${stage.rewardEXP} EXP</span>
+          </div>
+          
+          <div class="flex items-center gap-3 bg-slate-950/40 p-2 rounded border border-slate-800/40">
+            <div class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center shrink-0">
+              <span class="text-xs text-rose-400 font-bold">VS</span>
+            </div>
+            <div class="text-xs font-mono truncate">
+              <div class="text-white font-bold truncate">${stage.enemyName}</div>
+              <div class="text-slate-400">Lv.${stage.Lv} ${enemyStatic.name}</div>
+            </div>
+          </div>
+
+          <button onclick="tryTriggerBattle('${stage.id}')" class="w-full bg-sky-500 hover:bg-sky-600 text-slate-950 text-xs font-bold py-2 rounded-lg transition text-center shadow-lg shadow-sky-500/10">
+            전투 돌입하기
+          </button>
+        `;
+        stageContainer.appendChild(card);
+      });
     }
 
-    function equipSkill(id) {
-      if (SKILLS_DB[id].type === 'enhanced') return alert(`❌ 강화 액티브는 직접 장착할 수 없습니다.`);
-      if (playerData.equipped.includes(id)) return;
-      let currentAp = playerData.equipped.reduce((sum, sid) => sum + (SKILLS_DB[sid]?.ap || 0), 0);
-      if (currentAp + SKILLS_DB[id].ap > playerData.maxAp) return alert(`❌ AP 상한 초과!`);
-      playerData.equipped.push(id); updateLobbyUI();
+    function selectActivePokemon(key) {
+      playerData.currentPokemon = key;
+      updateLobbyUI();
     }
-    function unequipSkill(id) {
-      playerData.equipped = playerData.equipped.filter(eid => eid !== id); updateLobbyUI();
+
+    function toggleEquipSkill(id) {
+      const activeName = playerData.currentPokemon;
+      const pkmnObj = playerData.pokemons[activeName];
+      const activeStatic = DATA_POKEMON[activeName];
+      
+      const isEquipped = pkmnObj.equipped.includes(id);
+      if (isEquipped) {
+        pkmnObj.equipped = pkmnObj.equipped.filter(x => x !== id);
+      } else {
+        const skill = SKILLS_DB[id];
+        let currentApUsed = pkmnObj.equipped.reduce((sum, sId) => sum + (SKILLS_DB[sId]?.ap || 0), 0);
+        if (currentApUsed + skill.ap > activeStatic.maxAp) {
+          triggerModalAlert(`⚠️ 장착 슬롯 AP 상한(${activeStatic.maxAp} AP)을 초과할 수 없습니다.`);
+          return;
+        }
+        pkmnObj.equipped.push(id);
+      }
+      updateLobbyUI();
+      saveDataLocal();
+    }
+
+    function unequipSkillDirect(id) {
+      const activeName = playerData.currentPokemon;
+      const pkmnObj = playerData.pokemons[activeName];
+      pkmnObj.equipped = pkmnObj.equipped.filter(x => x !== id);
+      updateLobbyUI();
+      saveDataLocal();
+    }
+
+    // ==========================================
+    // 8. Base Stat Calculation Formulations
+    // ==========================================
+    function calculateEntityStats(e) {
+      // Initialize with correct static base properties
+      e.p_stats = {
+        pHP: e.pokemonBase.p_stats.pHP,
+        pPA: e.pokemonBase.p_stats.pPA,
+        pMA: e.pokemonBase.p_stats.pMA,
+        pPD: e.pokemonBase.p_stats.pPD,
+        pMD: e.pokemonBase.p_stats.pMD,
+        pAR: e.pokemonBase.p_stats.pAR
+      };
+      
+      e.inherent = {
+        CT: e.pokemonBase.inherent.CT,
+        CD: e.pokemonBase.inherent.CD,
+        AV: e.pokemonBase.inherent.AV,
+        EXPR: e.pokemonBase.inherent.EXPR
+      };
+
+      // Execute Passives
+      e.combatDeck.forEach(id => {
+        let skill = SKILLS_DB[id];
+        if (skill && skill.type === 'passive' && skill.apply) {
+          skill.apply(e);
+        }
+      });
+
+      // Resonance Condition
+      // "전광석화, 신속 모두 장착 시 전광석화, 신속 비활성화 후 '강화 신속' 활성화"
+      if (e.combatDeck.includes('quick_attack') && e.combatDeck.includes('extreme_speed')) {
+        e.combatDeck = e.combatDeck.filter(x => x !== 'quick_attack' && x !== 'extreme_speed');
+        e.combatDeck.push('enhanced_extreme_speed');
+      }
+
+      // "파괴광선, 기가임팩트 모두 장착 시 파괴광선, 기가임팩트 비활성화 후 '버스트 스트림' 활성화"
+      if (e.combatDeck.includes('hyper_beam') && e.combatDeck.includes('giga_impact')) {
+        e.combatDeck = e.combatDeck.filter(x => x !== 'hyper_beam' && x !== 'giga_impact');
+        e.combatDeck.push('burst_stream');
+      }
+
+      let Lv = e.Lv;
+      let b = e.base;
+      let p = e.p_stats;
+
+      // Base definitions with protection caps
+      let HP = Math.max(1, b.HP);
+      let Attack = Math.max(1, b.Attack);
+      let SpAtk = Math.max(1, b.SpAtk);
+      let Defense = Math.max(1, b.Defense);
+      let SpDef = Math.max(1, b.SpDef);
+      let Speed = Math.max(1, b.Speed);
+
+      // Formulas
+      e.HR = 1 + p.pHP / 100;
+      e.PR = h(120, (1 + Lv / 100) * Attack) + p.pPA / 100;
+      e.MR = h(120, (1 + Lv / 100) * SpAtk) + p.pMA / 100;
+      e.PD = f(100, 53, (1 + Lv / 100) * Defense) + p.pPD;
+      e.MD = f(100, 53, (1 + Lv / 100) * SpDef) + p.pMD;
+      e.AR = 1 - p.pAR / 100;
+
+      e.MHP = Math.max(1, Math.floor((100 + Lv) * f(100, 100, (1 + Lv / 100) * HP) * e.HR));
+      e.NHP = e.MHP;
+      
+      e.PA = k_fn(Attack) * e.PR;
+      e.MA = k_fn(SpAtk) * e.MR;
+      
+      // Delay formula (Speed based)
+      e.DLY = Math.max(50, g((1 + Lv / 100) * Speed) * e.AR); 
+
+      e.CT = e.inherent.CT;
+      e.CD = e.inherent.CD;
+      e.AV = e.inherent.AV;
+      e.EXPR = e.inherent.EXPR;
     }
 
     function buildCombatEntity(isPlayer, stageData = null) {
-      let entity = { id: isPlayer ? 'player' : 'boss', buffs: {}, limits: {} };
+      let e = {
+        id: isPlayer ? 'player' : 'boss',
+        buffs: {},
+        limits: {}
+      };
+
       if (isPlayer) {
-        let pkmn = DATA_POKEMON[playerData.pokemon];
-        entity.name = "플레이어(" + pkmn.name + ")"; entity.spriteName = pkmn.name;
-        entity.Lv = Math.max(1, playerData.Lv);
-        entity.base = JSON.parse(JSON.stringify(pkmn.base));
-        entity.p_stats = JSON.parse(JSON.stringify(pkmn.p_stats));
-        entity.inherent = JSON.parse(JSON.stringify(pkmn.inherent));
-        entity.combatDeck = [...playerData.equipped];
+        const activeName = playerData.currentPokemon;
+        const pkmnObj = playerData.pokemons[activeName];
+        const activeStatic = DATA_POKEMON[activeName];
+
+        e.name = `플레이어 (${activeStatic.name})`;
+        e.spriteName = activeStatic.sprite;
+        e.Lv = pkmnObj.Lv;
+        e.pokemonBase = activeStatic;
+        e.base = { ...activeStatic.base };
+        e.combatDeck = [...pkmnObj.equipped];
       } else {
-        let pkmn = DATA_POKEMON[stageData.enemySpecies];
-        entity.name = "적 " + stageData.name; entity.spriteName = pkmn.name;
-        entity.Lv = Math.max(1, stageData.Lv);
-        entity.base = JSON.parse(JSON.stringify(pkmn.base));
-        entity.p_stats = {
-          pHP: pkmn.p_stats.pHP + stageData.add_p.pHP, pPA: pkmn.p_stats.pPA + stageData.add_p.pPA,
-          pMA: pkmn.p_stats.pMA + stageData.add_p.pMA, pPD: pkmn.p_stats.pPD + stageData.add_p.pPD,
-          pMD: pkmn.p_stats.pMD + stageData.add_p.pMD, pAR: pkmn.p_stats.pAR + stageData.add_p.pAR
+        const bossStatic = DATA_POKEMON[stageData.enemySpecies];
+        
+        e.name = stageData.enemyName;
+        e.spriteName = bossStatic.sprite;
+        e.Lv = stageData.Lv;
+        e.pokemonBase = {
+          p_stats: {
+            pHP: bossStatic.p_stats.pHP + stageData.add_p.pHP,
+            pPA: bossStatic.p_stats.pPA + stageData.add_p.pPA,
+            pMA: bossStatic.p_stats.pMA + stageData.add_p.pMA,
+            pPD: bossStatic.p_stats.pPD + stageData.add_p.pPD,
+            pMD: bossStatic.p_stats.pMD + stageData.add_p.pMD,
+            pAR: bossStatic.p_stats.pAR + stageData.add_p.pAR
+          },
+          inherent: {
+            CT: bossStatic.inherent.CT + stageData.add_i.CT,
+            CD: bossStatic.inherent.CD + stageData.add_i.CD,
+            AV: bossStatic.inherent.AV + stageData.add_i.AV,
+            EXPR: bossStatic.inherent.EXPR
+          }
         };
-        entity.inherent = {
-          CT: pkmn.inherent.CT + stageData.add_i.CT, CD: pkmn.inherent.CD + stageData.add_i.CD,
-          AV: pkmn.inherent.AV + stageData.add_i.AV, EXPR: pkmn.inherent.EXPR
-        };
-        entity.combatDeck = [...stageData.skills];
+        e.base = { ...bossStatic.base };
+        e.combatDeck = [...stageData.skills];
       }
-      return entity;
+
+      return e;
     }
 
-    function calculateEntityStats(e) {
-      e.combatDeck.forEach(id => {
-        let skill = SKILLS_DB[id];
-        if (skill && skill.type === 'passive' && skill.apply) skill.apply(e);
-      });
-
-      if (e.combatDeck.includes('quick_attack') && e.combatDeck.includes('extreme_speed')) {
-        e.combatDeck = e.combatDeck.filter(id => id !== 'quick_attack' && id !== 'extreme_speed'); e.combatDeck.push('enhanced_extreme_speed');
-      }
-      if (e.combatDeck.includes('hyper_beam') && e.combatDeck.includes('giga_impact')) {
-        e.combatDeck = e.combatDeck.filter(id => id !== 'hyper_beam' && id !== 'giga_impact'); e.combatDeck.push('burst_stream');
-      }
-
-      let Lv = e.Lv; let b = e.base; let p = e.p_stats;
-      let atk = Math.max(1, b.Attack); let spa = Math.max(1, b.SpAtk);
-      let def = Math.max(1, b.Defense); let spd = Math.max(1, b.SpDef);
-      let hp = Math.max(1, b.HP); let speed = Math.max(1, b.Speed);
-
-      e.HR = 1 + p.pHP / 100;
-      e.PR = h(120, (1 + Lv/100) * atk) + p.pPA / 100;
-      e.MR = h(120, (1 + Lv/100) * spa) + p.pMA / 100;
-      e.PD = f(100, 53, (1 + Lv/100) * def) + p.pPD;
-      e.MD = f(100, 53, (1 + Lv/100) * spd) + p.pMD;
-      e.AR = 1 - p.pAR / 100;
-
-      e.MHP = Math.max(1, Math.floor((100 + Lv) * f(100, 100, (1 + Lv/100) * hp) * e.HR));
-      e.NHP = e.MHP;
+    // ==========================================
+    // 9. Arena Combat Launcher Setup
+    // ==========================================
+    function tryTriggerBattle(stageId) {
+      const activeName = playerData.currentPokemon;
+      const pkmnObj = playerData.pokemons[activeName];
+      const activeStatic = DATA_POKEMON[activeName];
       
-      e.PA = k_fn(atk) * e.PR;
-      e.MA = k_fn(spa) * e.MR;
-      e.DLY = Math.max(50, g((1 + Lv/100) * speed) * e.AR); 
+      let currentApUsed = pkmnObj.equipped.reduce((sum, id) => sum + (SKILLS_DB[id]?.ap || 0), 0);
+      if (currentApUsed > activeStatic.maxAp) {
+        triggerModalAlert("⚠️ AP 용량을 초과한 포켓몬은 전투를 시작할 수 없습니다. 스킬 장착을 조율해 주세요.");
+        return;
+      }
 
-      e.CT = e.inherent.CT; e.CD = e.inherent.CD; e.AV = e.inherent.AV; e.EXPR = e.inherent.EXPR;
-    }
+      const stage = DATA_ENEMY.find(x => x.id === stageId);
+      if (!stage) return;
 
-    function prepareBattle(stageId) {
-      let currentAp = playerData.equipped.reduce((sum, id) => sum + (SKILLS_DB[id]?.ap || 0), 0);
-      if (currentAp > playerData.maxAp) return alert("AP 상한 초과 상태로 전투할 수 없습니다.");
-
-      const stage = DATA_ENEMY.find(s => s.id === stageId);
       selectedRewardEXP = stage.rewardEXP;
 
-      document.getElementById('lobby-screen').classList.remove('active-view');
-      document.getElementById('battle-screen').classList.add('active-view');
-      document.getElementById('btn-return').disabled = true;
-      document.getElementById('log-box').innerHTML = ""; logBuffer = [];
+      // Switch views
+      document.getElementById('lobby-screen').classList.add('hidden');
+      document.getElementById('battle-screen').classList.remove('hidden');
+      document.getElementById('battle-return-btn').disabled = true;
 
+      // Clear battle visual elements
+      const logBox = document.getElementById('battle-log-box');
+      logBox.innerHTML = "";
+      logBuffer = [];
+
+      // Build Combat Objects
       combatPlayer = buildCombatEntity(true);
       combatBoss = buildCombatEntity(false, stage);
 
       calculateEntityStats(combatPlayer);
       calculateEntityStats(combatBoss);
 
-      document.getElementById('p-name').innerText = combatPlayer.name;
-      document.getElementById('b-name').innerText = combatBoss.name;
+      // Render Static unit visual data
+      document.getElementById('battle-p-title').innerText = `${combatPlayer.name} (Lv.${combatPlayer.Lv})`;
+      document.getElementById('battle-b-title').innerText = `${combatBoss.name} (Lv.${combatBoss.Lv})`;
       
-      loadSprite('battle-p-img', combatPlayer.spriteName);
-      loadSprite('battle-b-img', combatBoss.spriteName);
+      document.getElementById('battle-p-sprite').src = getFallbackSpriteUrl(combatPlayer.spriteName);
+      document.getElementById('battle-b-sprite').src = getFallbackSpriteUrl(combatBoss.spriteName);
 
       isBattleActive = true;
-      bufferLog(`<span class="log-sys">=== [${stage.name}] 전투 개시 ===</span>`);
-      
-      if (document.getElementById('skip-battle-chk').checked) runSimulationLoop();
-      else {
-        combatPlayer.nextActionTime = combatPlayer.DLY;
-        combatBoss.nextActionTime = combatBoss.DLY;
-        runRealtimeLoop();
+      bufferLog(`<div class="text-sky-400 font-bold">⚔️ [${stage.storyName}] 전투를 시작합니다!</div>`);
+      bufferLog(`<div class="text-slate-500 font-mono">전투 제한 시간: 30초 (30000ms) | 최대 수용 간격 계산 완료</div>`);
+
+      // Skip toggle check
+      const skipChecked = document.getElementById('skip-battle-chk').checked;
+      if (skipChecked) {
+        runSkipSimulationEngine();
+      } else {
+        runVisualTimelineEngine();
       }
     }
 
-    function executeTurn(attacker, defender, currentTime) {
+    // ==========================================
+    // 10. Combat Loop Mechanics
+    // ==========================================
+    function executeTurn(attacker, defender, timestamp) {
       if (!isBattleActive) return;
-      try {
-        let logPrefix = attacker.id === 'player' ? `[${attacker.name}]` : `<span style="color:#f38ba8">[${attacker.name}]</span>`;
-        attacker.nextDelayOverride = undefined;
 
-        let actives = attacker.combatDeck.filter(id => {
-          let s = SKILLS_DB[id];
-          // 액티브 및 강화 액티브 모두 발동 확률 체크 대상에 포함
-          return s && (s.type === 'active' || s.type === 'enhanced') && s.chance > 0 && (!s.limit || (attacker.limits[id] || 0) < s.limit) && (!s.condition || s.condition(attacker));
-        });
-        actives.sort(() => Math.random() - 0.5);
+      let prefix = attacker.id === 'player' ? `<span class="text-sky-300 font-semibold">[아군]</span>` : `<span class="text-rose-400 font-semibold">[적군]</span>`;
+      attacker.nextDelayOverride = undefined; // reset override
 
-        let activated = null;
-        for (let id of actives) {
-          if (Math.random() * 100 < SKILLS_DB[id].chance) {
-            activated = SKILLS_DB[id];
-            attacker.limits[id] = (attacker.limits[id] || 0) + 1;
-            break;
-          }
+      // 1. Gather all triggerable active abilities
+      let actives = attacker.combatDeck.filter(id => {
+        let skill = SKILLS_DB[id];
+        if (!skill) return false;
+        if (skill.type !== 'active' && skill.type !== 'enhanced') return false;
+        if (skill.chance <= 0) return false;
+        
+        // n회 제한 체크
+        if (skill.limit && (attacker.limits[id] || 0) >= skill.limit) return false;
+
+        // Condition Check
+        if (skill.condition && !skill.condition(attacker)) return false;
+
+        return true;
+      });
+
+      // 2. Randomly shuffle trigger execution list
+      actives.sort(() => Math.random() - 0.5);
+
+      let triggered = null;
+
+      // 3. Roll probabilities sequentially
+      for (let id of actives) {
+        let skill = SKILLS_DB[id];
+        let roll = Math.random() * 100;
+        if (roll < skill.chance) {
+          triggered = skill;
+          attacker.limits[id] = (attacker.limits[id] || 0) + 1;
+          break; // Stop evaluating next active skills on trigger
         }
-
-        if (activated) {
-          bufferLog(`${logPrefix} ${activated.execute(attacker, defender)}`);
-        } else {
-          let basics = attacker.combatDeck.filter(id => SKILLS_DB[id] && SKILLS_DB[id].type === 'basic');
-          if (basics.length > 0) {
-            basics.sort(() => Math.random() - 0.5);
-            bufferLog(`${logPrefix} ${SKILLS_DB[basics[0]].execute(attacker, defender)}`);
-          } else {
-            let res = Gimmick.attack(attacker, defender, (attacker.PA * 0.5), 'Pdmg');
-            let recoil = Gimmick.recoilMHP(attacker, 0.5);
-            bufferLog(`${logPrefix} 발버둥! ${res.msg} [반동피해 <span class="log-dmg">${recoil}</span>]`);
-          }
-        }
-
-        let nextDelay = attacker.nextDelayOverride !== undefined ? attacker.nextDelayOverride : attacker.DLY;
-        attacker.nextActionTime = currentTime + Math.max(50, nextDelay);
-
-        if (attacker.id === 'player') {
-          if (combatBoss.NHP <= 0) triggerBattleEnd(true);
-        } else {
-          if (combatPlayer.NHP <= 0) triggerBattleEnd(false);
-        }
-      } catch (e) {
-        console.error(e); bufferLog(`<span class="log-dmg">오류 발생: 턴 스킵됨</span>`);
       }
+
+      // 4. Fallback Execution (Basic abilities or struggle)
+      if (triggered) {
+        let text = triggered.execute(attacker, defender);
+        bufferLog(`${prefix} <b class="text-white">${triggered.name}</b> 발동: ${text}`);
+      } else {
+        // Fallback to basic type skill
+        let basics = attacker.combatDeck.filter(id => SKILLS_DB[id] && SKILLS_DB[id].type === 'basic');
+        if (basics.length > 0) {
+          let randomBasicId = basics[Math.floor(Math.random() * basics.length)];
+          let skill = SKILLS_DB[randomBasicId];
+          let text = skill.execute(attacker, defender);
+          bufferLog(`${prefix} <b class="text-purple-300">${skill.name}</b> 발동: ${text}`);
+        } else {
+          // Struggle (발버둥): 무속성, PA*0.5 Pdmg, 자신 MHP 0.5%만큼 자신에게 반동
+          let res = Gimmick.attack(attacker, defender, attacker.PA * 0.5, 'Pdmg');
+          let selfDmg = Gimmick.recoilMHP(attacker, 0.5);
+          bufferLog(`${prefix} <span class="text-slate-400">발버둥!</span> ${res.msg} [자신 반동 피해 <b class="text-rose-500">${selfDmg}</b>]`);
+        }
+      }
+
+      // Check combat outcomes instantly after turn processing
+      // 승리: 자신 턴 종료시에 상대 NHP<=0
+      // 패배: 상대 턴 종료시에 자신 NHP<=0, 또는 전투시간 초과
+      if (attacker.id === 'player') {
+        if (combatBoss.NHP <= 0) {
+          triggerArenaResolution(true);
+          return;
+        }
+      } else {
+        if (combatPlayer.NHP <= 0) {
+          triggerArenaResolution(false);
+          return;
+        }
+      }
+
+      // Re-schedule next timeline step
+      let delayStep = attacker.nextDelayOverride !== undefined ? attacker.nextDelayOverride : attacker.DLY;
+      attacker.nextActionTime = timestamp + Math.max(10, delayStep);
     }
 
-    function runSimulationLoop() {
-      let currentTime = 0; const MAX_TIME = 30000;
-      combatPlayer.nextActionTime = combatPlayer.DLY; combatBoss.nextActionTime = combatBoss.DLY;
-      
-      let safetyCounter = 0;
-      while (isBattleActive && currentTime <= MAX_TIME && safetyCounter < 2000) {
-        safetyCounter++;
-        let minTime = Math.min(combatPlayer.nextActionTime, combatBoss.nextActionTime);
-        currentTime = minTime;
-        if (currentTime > MAX_TIME) { triggerBattleEnd(false, true); break; }
-        if (combatPlayer.nextActionTime <= combatBoss.nextActionTime) executeTurn(combatPlayer, combatBoss, currentTime);
-        else executeTurn(combatBoss, combatPlayer, currentTime);
+    // High-speed visual simulation engine
+    function runSkipSimulationEngine() {
+      let currentTime = 0;
+      combatPlayer.nextActionTime = combatPlayer.DLY;
+      combatBoss.nextActionTime = combatBoss.DLY;
+
+      let safetyBreaker = 0;
+
+      while (isBattleActive && currentTime <= 30000 && safetyBreaker < 1000) {
+        safetyBreaker++;
+        let nextTime = Math.min(combatPlayer.nextActionTime, combatBoss.nextActionTime);
+        currentTime = nextTime;
+
+        if (currentTime > 30000) {
+          triggerArenaResolution(false, true); // Timeout loss
+          break;
+        }
+
+        if (combatPlayer.nextActionTime <= combatBoss.nextActionTime) {
+          executeTurn(combatPlayer, combatBoss, currentTime);
+        } else {
+          executeTurn(combatBoss, combatPlayer, currentTime);
+        }
       }
-      updateBattleUI(); flushLogs();
+
+      // Instantly flush the UI
+      updateBattleUI();
+      flushCombatLogs();
+      document.getElementById('battle-time-elapsed').innerText = `${(currentTime / 1000).toFixed(2)}s / 30.00s`;
     }
 
-    function runRealtimeLoop() {
-      let currentTime = 0; const MAX_TIME = 30000;
+    // Realtime incremental timer engine
+    function runVisualTimelineEngine() {
+      let currentTime = 0;
+      combatPlayer.nextActionTime = combatPlayer.DLY;
+      combatBoss.nextActionTime = combatBoss.DLY;
+
       function tick() {
         if (!isBattleActive) return;
-        let minTime = Math.min(combatPlayer.nextActionTime, combatBoss.nextActionTime);
-        currentTime = minTime;
-        if (currentTime > MAX_TIME) { triggerBattleEnd(false, true); updateBattleUI(); flushLogs(); return; }
-        if (combatPlayer.nextActionTime <= combatBoss.nextActionTime) executeTurn(combatPlayer, combatBoss, currentTime);
-        else executeTurn(combatBoss, combatPlayer, currentTime);
 
-        updateBattleUI(); flushLogs();
-        if (isBattleActive) setTimeout(tick, 50); 
+        let nextTime = Math.min(combatPlayer.nextActionTime, combatBoss.nextActionTime);
+        currentTime = nextTime;
+
+        if (currentTime > 30000) {
+          triggerArenaResolution(false, true); // Timeout loss
+          updateBattleUI();
+          flushCombatLogs();
+          return;
+        }
+
+        if (combatPlayer.nextActionTime <= combatBoss.nextActionTime) {
+          executeTurn(combatPlayer, combatBoss, currentTime);
+        } else {
+          executeTurn(combatBoss, combatPlayer, currentTime);
+        }
+
+        updateBattleUI();
+        flushCombatLogs();
+        document.getElementById('battle-time-elapsed').innerText = `${(currentTime / 1000).toFixed(2)}s / 30.00s`;
+
+        if (isBattleActive) {
+          let timer = setTimeout(tick, 70); // Simulated timeline delay steps
+          battleTimers.push(timer);
+        }
       }
+
       tick();
     }
 
-    function bufferLog(msg) { logBuffer.push(`<div>${msg}</div>`); }
-    function flushLogs() {
+    function bufferLog(text) {
+      logBuffer.push(`<div class="border-b border-slate-900/60 pb-1">${text}</div>`);
+    }
+
+    function flushCombatLogs() {
       if (logBuffer.length === 0) return;
-      const box = document.getElementById('log-box');
-      box.insertAdjacentHTML('beforeend', logBuffer.join(''));
-      logBuffer = []; box.scrollTop = box.scrollHeight;
+      const logBox = document.getElementById('battle-log-box');
+      logBox.insertAdjacentHTML('beforeend', logBuffer.join(''));
+      logBuffer = [];
+      logBox.scrollTop = logBox.scrollHeight;
     }
 
-    function triggerBattleEnd(isWin, isTimeout = false) {
-      isBattleActive = false; bufferLog(`<hr>`);
-      if (isWin) {
-        bufferLog(`<span class="log-sys" style="font-size:16px;">🏆 전투 승리!! (EXP +${selectedRewardEXP})</span>`);
-        grantEXP(selectedRewardEXP);
+    // ==========================================
+    // 11. Combat Outcome Resolution
+    // ==========================================
+    function triggerArenaResolution(isVictory, isTimeout = false) {
+      isBattleActive = false;
+      battleTimers.forEach(clearTimeout);
+      battleTimers = [];
+
+      bufferLog(`<hr class="border-slate-800 my-2">`);
+
+      if (isVictory) {
+        bufferLog(`<div class="text-emerald-400 font-extrabold text-lg">🏆 전투 승리! 숙련도 보상 +${selectedRewardEXP} EXP</div>`);
+        awardActiveExperience(selectedRewardEXP);
       } else {
-        if(isTimeout) bufferLog(`<span class="log-dmg" style="font-size:16px;">⏳ 전투시간 초과(30초)... 패배.</span>`);
-        else bufferLog(`<span class="log-dmg" style="font-size:16px;">💀 플레이어 사망... 전투 패배.</span>`);
+        if (isTimeout) {
+          bufferLog(`<div class="text-rose-500 font-extrabold text-lg">⏳ 시간 초과 (30초 만료) - 패배하였습니다.</div>`);
+        } else {
+          bufferLog(`<div class="text-rose-500 font-extrabold text-lg">💀 기절 - 전투에서 패배하였습니다.</div>`);
+        }
       }
-      document.getElementById('btn-return').disabled = false;
+
+      document.getElementById('battle-return-btn').disabled = false;
+      updateBattleUI();
+      flushCombatLogs();
     }
 
-    function grantEXP(amount) {
-      playerData.EXP += amount;
-      let pkmn = DATA_POKEMON[playerData.pokemon];
-      let rexp = getREXP(playerData.Lv, pkmn.inherent.EXPR);
-      while (playerData.EXP >= rexp) {
-        playerData.EXP -= rexp; playerData.Lv += 1;
-        bufferLog(`<span class="log-heal" style="font-size:15px;">🎉 [레벨 업!] Lv.${playerData.Lv} 달성!</span>`);
-        rexp = getREXP(playerData.Lv, pkmn.inherent.EXPR);
+    function awardActiveExperience(amount) {
+      const activeName = playerData.currentPokemon;
+      const pkmnObj = playerData.pokemons[activeName];
+      const activeStatic = DATA_POKEMON[activeName];
+
+      pkmnObj.EXP += amount;
+
+      let rexp = getREXP(pkmnObj.Lv, activeStatic.inherent.EXPR);
+      let didLevelUp = false;
+
+      while (pkmnObj.EXP >= rexp) {
+        pkmnObj.EXP -= rexp;
+        pkmnObj.Lv += 1;
+        didLevelUp = true;
+        rexp = getREXP(pkmnObj.Lv, activeStatic.inherent.EXPR);
       }
-      saveDataLocal(); 
+
+      if (didLevelUp) {
+        bufferLog(`<div class="text-sky-400 font-bold text-sm">🎉 축하합니다! ${activeStatic.name}가 Lv.${pkmnObj.Lv}로 성장했습니다!</div>`);
+      }
+
+      saveDataLocal();
     }
 
     function updateBattleUI() {
-      if(!combatPlayer || !combatBoss) return;
-      document.getElementById('p-hp-bar').style.width = Math.max(0, (combatPlayer.NHP / combatPlayer.MHP) * 100) + '%';
-      document.getElementById('b-hp-bar').style.width = Math.max(0, (combatBoss.NHP / combatBoss.MHP) * 100) + '%';
-      
-      const renderStats = (c) => `
-        <span style="color:#a6e3a1; font-weight:bold;">Lv.${c.Lv} | HP: ${Math.floor(c.NHP)} / ${c.MHP}</span><br>
-        <span class="stat-title">파생 계수</span> PA: ${c.PA.toFixed(1)} | MA: ${c.MA.toFixed(1)} | PD: ${c.PD.toFixed(1)} | MD: ${c.MD.toFixed(1)}<br>
-        <span class="stat-title">고유 능력</span> DLY: ${c.DLY.toFixed(1)}ms | CT: ${c.CT.toFixed(1)}% | AV: ${c.AV.toFixed(1)}%
+      if (!combatPlayer || !combatBoss) return;
+
+      // Update HP Bars
+      const pHpPercent = Math.max(0, (combatPlayer.NHP / combatPlayer.MHP) * 100);
+      const bHpPercent = Math.max(0, (combatBoss.NHP / combatBoss.MHP) * 100);
+
+      document.getElementById('battle-p-hp-bar').style.width = `${pHpPercent}%`;
+      document.getElementById('battle-b-hp-bar').style.width = `${bHpPercent}%`;
+
+      document.getElementById('battle-p-hp-text').innerText = `${Math.max(0, Math.floor(combatPlayer.NHP))} / ${combatPlayer.MHP}`;
+      document.getElementById('battle-b-hp-text').innerText = `${Math.max(0, Math.floor(combatBoss.NHP))} / ${combatBoss.MHP}`;
+
+      // Update Live stats panels
+      document.getElementById('battle-p-stats-box').innerHTML = `
+        <div class="text-slate-400 border-b border-slate-800 pb-1 mb-1 font-bold">전투 정보</div>
+        <div class="flex justify-between"><span>물리 계수 (PA)</span> <span class="text-white font-bold">${combatPlayer.PA.toFixed(1)}</span></div>
+        <div class="flex justify-between"><span>특수 계수 (MA)</span> <span class="text-white font-bold">${combatPlayer.MA.toFixed(1)}</span></div>
+        <div class="flex justify-between"><span>물리 방어 (PD)</span> <span class="text-white">${combatPlayer.PD.toFixed(1)}%</span></div>
+        <div class="flex justify-between"><span>특수 방어 (MD)</span> <span class="text-white">${combatPlayer.MD.toFixed(1)}%</span></div>
+        <div class="flex justify-between"><span>공격 주기 (DLY)</span> <span class="text-sky-400 font-bold">${combatPlayer.DLY.toFixed(0)}ms</span></div>
+        <div class="flex justify-between"><span>치명타율 (CT)</span> <span class="text-amber-400">${combatPlayer.CT.toFixed(1)}%</span></div>
+        <div class="flex justify-between"><span>회피율 (AV)</span> <span class="text-indigo-400">${combatPlayer.AV.toFixed(1)}%</span></div>
       `;
-      document.getElementById('p-stats').innerHTML = renderStats(combatPlayer);
-      document.getElementById('b-stats').innerHTML = renderStats(combatBoss);
+
+      document.getElementById('battle-b-stats-box').innerHTML = `
+        <div class="text-slate-400 border-b border-slate-800 pb-1 mb-1 font-bold">전투 정보</div>
+        <div class="flex justify-between"><span>물리 계수 (PA)</span> <span class="text-white font-bold">${combatBoss.PA.toFixed(1)}</span></div>
+        <div class="flex justify-between"><span>특수 계수 (MA)</span> <span class="text-white font-bold">${combatBoss.MA.toFixed(1)}</span></div>
+        <div class="flex justify-between"><span>물리 방어 (PD)</span> <span class="text-white">${combatBoss.PD.toFixed(1)}%</span></div>
+        <div class="flex justify-between"><span>특수 방어 (MD)</span> <span class="text-white">${combatBoss.MD.toFixed(1)}%</span></div>
+        <div class="flex justify-between"><span>공격 주기 (DLY)</span> <span class="text-rose-400 font-bold">${combatBoss.DLY.toFixed(0)}ms</span></div>
+        <div class="flex justify-between"><span>치명타율 (CT)</span> <span class="text-amber-400">${combatBoss.CT.toFixed(1)}%</span></div>
+        <div class="flex justify-between"><span>회피율 (AV)</span> <span class="text-indigo-400">${combatBoss.AV.toFixed(1)}%</span></div>
+      `;
     }
 
     function returnToLobby() {
-      document.getElementById('battle-screen').classList.remove('active-view');
-      document.getElementById('lobby-screen').classList.add('active-view');
-      updateLobbyUI(); 
+      // Clear visual instances
+      combatPlayer = null;
+      combatBoss = null;
+
+      // Switch views back
+      document.getElementById('battle-screen').classList.add('hidden');
+      document.getElementById('lobby-screen').classList.remove('hidden');
+
+      updateLobbyUI();
     }
 
-    window.onload = () => { loadDataLocal(); updateLobbyUI(); };
+    // ==========================================
+    // 12. Modal Handlers
+    // ==========================================
+    function triggerModalAlert(msg) {
+      document.getElementById('modal-alert-msg').innerText = msg;
+      document.getElementById('modal-alert').classList.remove('hidden');
+    }
+
+    function closeModalAlert() {
+      document.getElementById('modal-alert').classList.add('hidden');
+    }
+
+    // Load initial triggers on page render
+    window.onload = function() {
+      loadDataLocal();
+      updateLobbyUI();
+    };
   </script>
 </body>
 </html>
