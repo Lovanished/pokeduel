@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pokeraid - Deck Building & Battle</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  <style>
+    :root {
+      --bg: #1e1e2e; --panel-bg: #2a2b3c; --text: #cdd6f4;
+      --sys: #89dceb; --dmg: #f38ba8; --heal: #a6e3a1; 
+      --skill: #f9e2af; --crit: #fab387; --evade: #b4befe; --ap-color: #fab387;
+    }
+    body { background-color: var(--bg); color: var(--text); font-family: 'Malgun Gothic', monospace; margin: 0; padding: 20px; }
+    h1, h2, h3 { text-align: center; color: #fff; margin-bottom: 10px; }
+    
+    .screen { display: none; max-width: 1100px; margin: 0 auto; gap: 20px; }
+    .active-view { display: flex; }
+    .panel { background: var(--panel-bg); padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+
+    /* 로비 레이아웃 */
+    #lobby-screen { flex-direction: column; }
+    .data-panel { background: #181825; padding: 10px 20px; border-radius: 8px; display: flex; justify-content: center; flex-wrap: wrap; gap: 15px; margin-bottom: 10px; border: 1px solid #444; }
+    
+    .btn-sub { background: #45475a; color: #cdd6f4; border: 1px solid #585b70; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; transition: 0.2s; }
+    .btn-sub:hover { background: #585b70; color: #fff; }
+    
+    .lobby-top { display: flex; gap: 20px; flex-wrap: wrap; }
+    .player-info-panel { flex: 1; min-width: 300px; background: #11111b; border: 1px solid #89b4fa; }
+    .story-panel { flex: 1; min-width: 300px; }
+
+    .exp-bar-bg { width: 100%; background: #444; height: 10px; border-radius: 5px; margin-top: 5px; overflow: hidden; }
+    .exp-bar-fill { height: 100%; background: #a6e3a1; transition: width 0.3s; }
+
+    .ap-wrapper { background: #333; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+    .ap-info { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; }
+    .ap-bar-bg { width: 100%; background: #444; height: 12px; border-radius: 6px; overflow: hidden; }
+    .ap-bar-fill { height: 100%; background: var(--ap-color); transition: width 0.3s; }
+
+    .deck-container { display: flex; flex-wrap: wrap; gap: 20px; }
+    .skill-list-panel { flex: 1.5; min-width: 300px; }
+    .equipped-panel { flex: 1; min-width: 300px; }
+    
+    .skill-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-top: 10px; }
+    .skill-card { background: #1e1e2e; border: 1px solid #444; border-radius: 6px; padding: 12px; cursor: pointer; transition: 0.2s; position: relative; }
+    .skill-card:hover { border-color: #89b4fa; background: #252636; }
+    .skill-card.equipped { border-color: #a6e3a1; background: #1c2d26; }
+    .skill-card .skill-name { font-weight: bold; color: #fff; margin-bottom: 5px; }
+    .skill-card .skill-ap { font-size: 12px; color: var(--ap-color); }
+    .skill-card .skill-desc { font-size: 11px; color: #a6adc8; margin-top: 5px; }
+    
+    .slot-list, .stage-list { display: flex; flex-direction: column; gap: 8px; }
+    .slot-item { background: #11111b; border: 1px dashed #555; border-radius: 6px; padding: 12px; display: flex; justify-content: space-between; align-items: center; }
+    .slot-item.filled { border-style: solid; border-color: #89b4fa; background: #1e1e2e; }
+    .btn-remove { background: #f38ba8; color: #111; border: none; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; }
+
+    .stage-item { background: #181825; border: 1px solid #f38ba8; border-radius: 6px; padding: 12px; cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center;}
+    .stage-item:hover { background: #313244; }
+    .stage-item .stage-title { font-weight: bold; color: #f38ba8; }
+    .stage-item .stage-reward { font-size: 12px; color: #a6e3a1; }
+
+    /* 전투 화면 */
+    #battle-screen { flex-wrap: wrap; }
+    .status-panel { flex: 1; min-width: 250px; }
+    .bar-bg { width: 100%; background: #444; height: 20px; border-radius: 10px; overflow: hidden; margin-bottom: 10px; border: 1px solid #000; }
+    .hp-bar { height: 100%; background: var(--dmg); transition: width 0.2s; }
+    .log-container { flex: 2; display: flex; flex-direction: column; min-width: 300px; }
+    #log-box { flex-grow: 1; background: #11111b; border: 1px solid #444; border-radius: 8px; padding: 15px; height: 450px; overflow-y: auto; font-size: 14px; line-height: 1.5; margin-bottom: 15px; }
+    
+    .btn-main { background: #89b4fa; color: #111; border: none; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer; transition: 0.2s; width: 100%; margin-top: 10px; }
+    .btn-main:hover { background: #b4befe; }
+    .btn-main:disabled { background: #555; cursor: not-allowed; color: #888; }
+
+    .log-sys { color: var(--sys); font-weight: bold; }
+    .log-dmg { color: var(--dmg); font-weight: bold; }
+    .log-crit { color: var(--crit); font-weight: bold; font-style: italic; }
+    .log-evade { color: var(--evade); font-style: italic; }
+    .skill-enhanced { text-shadow: 0 0 5px #fff; color: white; font-weight: bold; }
+    .skill-burst { text-shadow: 0 0 8px #89b4fa, 0 0 15px #b4befe; color: #e1e6f9; font-weight: bold; font-style: italic; }
+    
+    .stat-text { font-size: 12px; color: #bac2de; line-height: 1.6; background: #11111b; padding: 10px; border-radius: 5px; border: 1px solid #313244;}
+    .stat-title { color: #89b4fa; font-weight: bold; margin-top: 5px; display: inline-block; }
+    
+    /* 추가: 이미지 스프라이트 스타일 */
+    .sprite-box { display: flex; justify-content: center; margin-bottom: 10px; }
+    .sprite { width: 120px; height: 120px; object-fit: contain; filter: drop-shadow(0 0 5px rgba(255,255,255,0.1)); }
+  </style>
+</head>
+<body>
+
+  <div id="lobby-screen" class="screen active-view">
+    <h1>Pokeraid</h1>
+    
+    <div class="data-panel">
+      <button class="btn-sub" onclick="saveDataLocal()">💾 로컬 저장</button>
+      <button class="btn-sub" onclick="exportDataFile()">📂 데이터 내보내기</button>
+      <button class="btn-sub" onclick="document.getElementById('file-upload').click()">📁 데이터 불러오기</button>
+      <input type="file" id="file-upload" style="display:none;" accept=".txt,.json" onchange="importDataFile(event)">
+      <label style="display:flex; align-items:center; gap:5px; cursor:pointer; color:#fab387; font-weight:bold; margin-left: 10px;">
+        <input type="checkbox" id="skip-battle-chk"> ⚡ 전투 과정 생략 (결과만)
+      </label>
+    </div>
+
+    <div class="lobby-top">
+      <div class="panel player-info-panel">
+        <h2>내 정보</h2>
+        <div class="sprite-box"><img id="lobby-p-img" class="sprite" src="" alt="Player"></div>
+        <div id="player-summary" style="font-size: 14px; line-height: 1.8;"></div>
+      </div>
+      <div class="panel story-panel">
+        <h2>스토리 모드 (전투 돌입)</h2>
+        <div id="story-list" class="stage-list"></div>
+      </div>
+    </div>
+
+    <div class="panel ap-wrapper">
+      <div class="ap-info">
+        <span>장착 수용력 (AP)</span>
+        <span id="ap-text">0 / 25 AP</span>
+      </div>
+      <div class="ap-bar-bg"><div id="ap-bar" class="ap-bar-fill" style="width: 0%;"></div></div>
+    </div>
+
+    <div class="deck-container">
+      <div class="panel skill-list-panel">
+        <h2>보유 중인 능력 (클릭하여 장착)</h2>
+        <div id="unlocked-skill-grid" class="skill-grid"></div>
+      </div>
+
+      <div class="panel equipped-panel">
+        <h2>장착된 능력 목록</h2>
+        <div id="equipped-slot-list" class="slot-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="battle-screen" class="screen">
+    <div class="panel status-panel" id="player-panel">
+      <h2 id="p-name">플레이어</h2>
+      <div class="sprite-box"><img id="battle-p-img" class="sprite" src="" alt="Player"></div>
+      <div class="bar-bg"><div class="hp-bar" id="p-hp-bar" style="width: 100%;"></div></div>
+      <div id="p-stats" class="stat-text"></div>
+    </div>
+
+    <div class="log-container">
+      <div id="log-box"></div>
+      <button id="btn-return" class="btn-main" onclick="returnToLobby()" disabled>로비로 돌아가기</button>
+    </div>
+
+    <div class="panel status-panel" id="boss-panel">
+      <h2 id="b-name">보스</h2>
+      <div class="sprite-box"><img id="battle-b-img" class="sprite" src="" alt="Boss"></div>
+      <div class="bar-bg"><div class="hp-bar" id="b-hp-bar" style="width: 100%;"></div></div>
+      <div id="b-stats" class="stat-text"></div>
+    </div>
+  </div>
+
+  <script>
+    const SECRET_KEY = "pokeraid_secure_key_2026"; 
+
+    // =========================================================================
+    // 1. [JSON 데이터 영역] 
+    // 나중에 이 변수들의 내용을 각각 pokemon.json, enemy.json, skills.json으로 분리 가능
+    // =========================================================================
+    const DATA_POKEMON = {
+      'Pikachu': {
+        name: "피카츄",
+        base: { HP: 35, Attack: 55, SpAtk: 40, Defense: 50, SpDef: 50, Speed: 90 },
+        p_stats: { pHP: 0, pPA: 0, pMA: 0, pPD: 0, pMD: 0, pAR: 0 },
+        inherent: { CT: 10, CD: 0, AV: 5, EXPR: 0 }
+      }
+    };
+
+    const DATA_ENEMY = [
+      { id: 'stage1', name: "1.피", enemySpecies: 'Pikachu', Lv: 1, skills: ['tackle', 'quick_attack', 'keen_eye'], 
+        add_p: { pHP: 10, pPA: 0, pMA: 0, pPD: 0, pMD: 0, pAR: -1 }, add_i: { CT: 0, CD: 0, AV: 0 }, rewardEXP: 100 },
+      { id: 'stage2', name: "2.카", enemySpecies: 'Pikachu', Lv: 10, skills: ['tackle', 'quick_attack', 'keen_eye'], 
+        add_p: { pHP: 30, pPA: 0, pMA: 0, pPD: 0, pMD: 0, pAR: 0 }, add_i: { CT: 0, CD: 0, AV: 0 }, rewardEXP: 120 },
+      { id: 'stage3', name: "3.츄", enemySpecies: 'Pikachu', Lv: 20, skills: ['tackle', 'quick_attack', 'keen_eye'], 
+        add_p: { pHP: 50, pPA: 0, pMA: 0, pPD: 0, pMD: 0, pAR: 1 }, add_i: { CT: 0, CD: 0, AV: 0 }, rewardEXP: 150 },
+      { id: 'stage4', name: "4.피카츄", enemySpecies: 'Pikachu', Lv: 50, skills: ['tackle', 'extreme_speed', 'keen_eye'], 
+        add_p: { pHP: 100, pPA: 0, pMA: 0, pPD: 0, pMD: 0, pAR: 2 }, add_i: { CT: 0, CD: 0, AV: 0 }, rewardEXP: 200 },
+      { id: 'stage5', name: "5.픽하휴", enemySpecies: 'Pikachu', Lv: 100, skills: ['tackle', 'quick_attack', 'extreme_speed', 'keen_eye'], 
+        add_p: { pHP: 250, pPA: 0, pMA: 0, pPD: 0, pMD: 0, pAR: 5 }, add_i: { CT: 0, CD: 0, AV: 0 }, rewardEXP: 500 }
+    ];
+
+    const DATA_SKILL = {
+      'nitro_charge': { name: "니트로차지", type: 'active', ap: 5, chance: 35 },
+      'flare_blitz': { name: "플레어드라이브", type: 'active', ap: 12, chance: 80, limit: 1 },
+      'extreme_speed': { name: "신속", type: 'active', ap: 8, chance: 10 },
+      'quick_attack': { name: "전광석화", type: 'active', ap: 5, chance: 10 },
+      'self_destruct': { name: "자폭", type: 'active', ap: 10, chance: 100, limit: 1 },
+      'iron_defense': { name: "철벽", type: 'active', ap: 8, chance: 80, limit: 3 },
+      'fake_out': { name: "속이기", type: 'active', ap: 5, chance: 100, limit: 1 },
+      'hyper_beam': { name: "파괴광선", type: 'active', ap: 4, chance: 10 },
+      'giga_impact': { name: "기가임팩트", type: 'active', ap: 4, chance: 10 },
+      'icy_wind': { name: "얼다바람", type: 'active', ap: 6, chance: 10 },
+      'enhanced_extreme_speed': { name: "<span class='skill-enhanced'>신속</span>", type: 'active', ap: 0, chance: 12 },
+      'burst_stream': { name: "<span class='skill-burst'>버스트 스트림</span>", type: 'active', ap: 0, chance: 10 },
+      'sheer_force': { name: "우격다짐", type: 'passive', ap: 4 },
+      'keen_eye': { name: "날카로운눈", type: 'passive', ap: 3 },
+      'heatproof': { name: "내열", type: 'passive', ap: 4 },
+      'levitate': { name: "부유", type: 'passive', ap: 8 },
+      'tackle': { name: "몸통박치기", type: 'basic', ap: 1 }
+    };
+
+    // =========================================================================
+    // 2. [기믹 엔진 (Gimmick Engine)] 
+    // 자주 쓰이는 전투 로직(데미지, 스택, 딜레이)을 함수화하여 새로운 능력 추가를 쉽게 만듦
+    // =========================================================================
+    const Gimmick = {
+      attack: (attacker, defender, baseDamage, dmgType) => {
+        let isAdmg = (dmgType === 'Admg');
+        if (!isAdmg && Math.random() * 100 < defender.AV) return { dmg: 0, msg: `<span class="log-evade">적중 실패! (회피당함)</span>` };
+        
+        let finalDamage = baseDamage;
+        if (dmgType === 'Pdmg') finalDamage *= (100 - Math.min(100, defender.PD)) / 100;
+        else if (dmgType === 'Mdmg') finalDamage *= (100 - Math.min(100, defender.MD)) / 100;
+
+        let isCrit = false;
+        if (!isAdmg && Math.random() * 100 < attacker.CT) {
+          isCrit = true;
+          finalDamage = finalDamage * (attacker.CD + 150) / 100;
+        }
+        
+        finalDamage = Math.max(1, Math.floor(finalDamage)); 
+        defender.NHP -= finalDamage;
+        let msg = `적에게 <span class="log-dmg">${finalDamage}</span> 피해! <span style="font-size:11px; color:#a6adc8;">[${dmgType}]</span>`;
+        if (isCrit) msg += ` <span class="log-crit">(치명타!)</span>`;
+        return { dmg: finalDamage, msg: msg };
+      },
+      addStack: (entity, stackName, max) => { entity.buffs[stackName] = Math.min((entity.buffs[stackName] || 0) + 1, max); },
+      getStack: (entity, stackName) => entity.buffs[stackName] || 0,
+      clearStack: (entity, stackName) => { entity.buffs[stackName] = 0; },
+      recoilMHP: (entity, percent) => { let dmg = entity.MHP * (percent/100); entity.NHP -= dmg; return Math.floor(dmg); },
+      addDelay: (entity, multiplier) => { entity.nextDelayOverride = entity.DLY + (entity.DLY * multiplier); },
+      setDelay: (entity, fixedMs) => { entity.nextDelayOverride = fixedMs; },
+      reduceDelay: (entity, multiplier) => { entity.nextDelayOverride = entity.DLY - (entity.DLY * multiplier); }
+    };
+
+    // =========================================================================
+    // 3. [능력 로직 레지스트리 (Logic Registry)]
+    // 각 스킬의 텍스트 설명과 고유 실행(execute), 패시브 적용(apply) 로직 정의
+    // =========================================================================
+    const LOGIC_SKILL = {
+      // --- 액티브 ---
+      'nitro_charge': {
+        desc: "MA*1.2 Mdmg, 화염스택 1생성(최대8), 스택당 계수 0.1증가",
+        execute: (c, t) => {
+          let stack = Gimmick.getStack(c, 'flame');
+          let res = Gimmick.attack(c, t, c.MA * (1.2 + stack * 0.1), 'Mdmg');
+          Gimmick.addStack(c, 'flame', 8);
+          return `니트로차지! ${res.msg} (화염스택: ${Gimmick.getStack(c, 'flame')})`;
+        }
+      },
+      'flare_blitz': {
+        desc: "NHP 10%이하, MA*8 Mdmg(스택당 +1), 반동 5%, 스택제거",
+        condition: (c) => c.NHP <= c.MHP * 0.1,
+        execute: (c, t) => {
+          let stack = Gimmick.getStack(c, 'flame');
+          let res = Gimmick.attack(c, t, c.MA * (8 + stack), 'Mdmg');
+          let recoil = Gimmick.recoilMHP(c, 5);
+          Gimmick.clearStack(c, 'flame');
+          return `🔥플레어드라이브! ${res.msg} [반동 ${recoil}]`;
+        }
+      },
+      'extreme_speed': {
+        desc: "PA*0.5 Pdmg, 즉행동(다음 DLY 5ms)",
+        execute: (c, t) => {
+          let res = Gimmick.attack(c, t, c.PA * 0.5, 'Pdmg');
+          Gimmick.setDelay(c, 5); return `신속 발동! ${res.msg} (즉행동)`;
+        }
+      },
+      'quick_attack': {
+        desc: "PA*0.7 Pdmg, 다음 자신 DLY 0.7배 감소",
+        execute: (c, t) => {
+          let res = Gimmick.attack(c, t, c.PA * 0.7, 'Pdmg');
+          Gimmick.reduceDelay(c, 0.7); return `전광석화! ${res.msg} (행동 단축)`;
+        }
+      },
+      'self_destruct': {
+        desc: "NHP 10%이하, PA*15 Pdmg, 반동 30%, 다음 DLY 3배 추가",
+        condition: (c) => c.NHP <= c.MHP * 0.1,
+        execute: (c, t) => {
+          let res = Gimmick.attack(c, t, c.PA * 15, 'Pdmg');
+          let recoil = Gimmick.recoilMHP(c, 30);
+          Gimmick.addDelay(c, 3); return `💥자폭!! ${res.msg} [반동 ${recoil}, 딜레이 증가]`;
+        }
+      },
+      'iron_defense': {
+        desc: "PD 5만큼 증가", execute: (c, t) => { c.PD += 5; return `🛡️철벽! 방어력(PD) 5 증가.`; }
+      },
+      'fake_out': {
+        desc: "PA*1 Idmg, 상대 다음 DLY에 DLY*2 추가",
+        execute: (c, t) => {
+          let res = Gimmick.attack(c, t, c.PA * 1, 'Idmg');
+          Gimmick.addDelay(t, 2); return `속이기! ${res.msg} (상대 지연)`;
+        }
+      },
+      'hyper_beam': {
+        desc: "MA*5 Pdmg, 자신 다음 DLY 1.5배 추가",
+        execute: (c, t) => {
+          let res = Gimmick.attack(c, t, c.MA * 5, 'Pdmg');
+          Gimmick.addDelay(c, 1.5); return `파괴광선! ${res.msg} (딜레이 증가)`;
+        }
+      },
+      'giga_impact': {
+        desc: "PA*5 Pdmg, 자신 다음 DLY 1.5배 추가",
+        execute: (c, t) => {
+          let res = Gimmick.attack(c, t, c.PA * 5, 'Pdmg');
+          Gimmick.addDelay(c, 1.5); return `기가임팩트! ${res.msg} (딜레이 증가)`;
+        }
+      },
+      'icy_wind': {
+        desc: "MA*2 Admg, 상대 pMD-1, AV-1, 얼음스택 1생성(최대4)",
+        execute: (c, t) => {
+          let stack = Gimmick.getStack(c, 'ice');
+          let res = Gimmick.attack(c, t, c.MA * (2 + stack * 0.2), 'Admg');
+          t.p_stats.pMD -= 1; t.AV -= 1; t.MD = Math.max(1, t.MD - 1); // 실시간 스탯 반영 보정
+          Gimmick.addStack(c, 'ice', 4); return `❄️얼다바람! ${res.msg} (적 특방/회피 감소)`;
+        }
+      },
+      // --- 강화 액티브 ---
+      'enhanced_extreme_speed': {
+        desc: "공명: PA*1.2 Pdmg, 즉행동",
+        execute: (c, t) => {
+          let res = Gimmick.attack(c, t, c.PA * 1.2, 'Pdmg');
+          Gimmick.setDelay(c, 5); return `<span class='skill-enhanced'>신속</span> 발동! ${res.msg}`;
+        }
+      },
+      'burst_stream': {
+        desc: "공명: 4연타, 다음 DLY 1.5배 추가",
+        execute: (c, t) => {
+          let r1 = Gimmick.attack(c, t, c.PA * 5, 'Pdmg');
+          let r2 = Gimmick.attack(c, t, c.MA * 5, 'Mdmg');
+          let r3 = Gimmick.attack(c, t, c.PA * 1, 'Idmg');
+          let r4 = Gimmick.attack(c, t, c.MA * 1, 'Idmg');
+          Gimmick.addDelay(c, 1.5);
+          return `<span class='skill-burst'>버스트 스트림!!</span> 연속 타격!<br>&nbsp;&nbsp;├ 1타: ${r1.msg}<br>&nbsp;&nbsp;├ 2타: ${r2.msg}<br>&nbsp;&nbsp;├ 3타: ${r3.msg}<br>&nbsp;&nbsp;└ 4타: ${r4.msg}`;
+        }
+      },
+      // --- 패시브 ---
+      'sheer_force': { desc: "pHP -10, pPA +20", apply: (c) => { c.p_stats.pHP -= 10; c.p_stats.pPA += 20; } },
+      'keen_eye': { desc: "CT +4", apply: (c) => { c.inherent.CT += 4; } },
+      'heatproof': { desc: "pMD +3, pMA +10", apply: (c) => { c.p_stats.pMD += 3; c.p_stats.pMA += 10; } },
+      'levitate': { desc: "pAR +2, AV +3", apply: (c) => { c.p_stats.pAR += 2; c.inherent.AV += 3; } },
+      // --- 기본 ---
+      'tackle': { desc: "PA*1 Pdmg", execute: (c, t) => { let res = Gimmick.attack(c, t, c.PA * 1, 'Pdmg'); return `몸통박치기! ${res.msg}`; } }
+    };
+
+    // JSON 데이터와 로직 합치기 (최종 DB)
+    const SKILLS_DB = {};
+    for(let key in DATA_SKILL) { SKILLS_DB[key] = { ...DATA_SKILL[key], ...LOGIC_SKILL[key] }; }
+
+    // =========================================================================
+    // 4. [코어 엔진 (Core Engine)] - 수학 함수 및 스탯 계산
+    // =========================================================================
+    const f = (m, n, x) => (m * x) / (n + x);
+    const h = (k, x) => 0.2 + (3.8 * x) / (x + k);
+    const g = (x) => 70 + 530 / (1 + Math.pow(x / 300, 0.6));
+    const k_fn = (x) => 320 * (x / (x + 180)) + 6.8 * Math.pow(x, 0.5);
+
+    function getREXP(Lv, EXPR) { return Math.pow(100 + Lv, 2 + EXPR) / Math.pow(100, 1 + EXPR); }
+
+    let playerData = {
+      pokemon: "Pikachu", Lv: 1, EXP: 0, maxAp: 25,
+      unlockedSkills: Object.keys(SKILLS_DB),
+      equipped: ['tackle']
+    };
+
+    let combatPlayer, combatBoss;
+    let isBattleActive = false;
+    let logBuffer = []; 
+    let selectedRewardEXP = 0;
+
+    // --- 에셋(Asset) 렌더링 도우미 ---
+    function loadSprite(imgElementId, pkmnName) {
+      const img = document.getElementById(imgElementId);
+      // github pages 기준 asset/image/ 폴더 탐색. 없으면 placehold.co 렌더링
+      img.onerror = () => { img.src = `https://placehold.co/120x120/1e1e2e/89b4fa?text=${pkmnName}`; };
+      img.src = `asset/image/${pkmnName}.png`;
+    }
+
+    function getEncryptedSaveData() { return CryptoJS.AES.encrypt(JSON.stringify(playerData), SECRET_KEY).toString(); }
+    function applyEncryptedSaveData(encryptedData) {
+      try {
+        const bytes = CryptoJS.AES.decrypt(encryptedData, SECRET_KEY);
+        const decryptedStr = bytes.toString(CryptoJS.enc.Utf8);
+        if (!decryptedStr) throw new Error("Decryption failed");
+        playerData = Object.assign(playerData, JSON.parse(decryptedStr));
+        updateLobbyUI(); alert("데이터를 성공적으로 불러왔습니다!");
+      } catch (e) { alert("세이브 데이터가 손상되었거나 유효하지 않습니다."); }
+    }
+    function saveDataLocal() { localStorage.setItem("pokeraid_save_v3", getEncryptedSaveData()); alert("저장 완료."); }
+    function loadDataLocal() { const data = localStorage.getItem("pokeraid_save_v3"); if (data) applyEncryptedSaveData(data); }
+    function exportDataFile() {
+      const a = document.createElement('a');
+      a.href = window.URL.createObjectURL(new Blob([getEncryptedSaveData()], { type: 'text/plain' }));
+      a.download = 'pokeraid_save.txt'; a.click();
+    }
+    function importDataFile(event) {
+      const file = event.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => { applyEncryptedSaveData(e.target.result); event.target.value = ''; };
+      reader.readAsText(file);
+    }
+
+    function updateLobbyUI() {
+      const pkmn = DATA_POKEMON[playerData.pokemon];
+      let rexp = getREXP(playerData.Lv, pkmn.inherent.EXPR);
+      let expPercent = Math.min(100, (playerData.EXP / rexp) * 100);
+      
+      loadSprite('lobby-p-img', pkmn.name);
+
+      document.getElementById('player-summary').innerHTML = `
+        <strong>종족:</strong> ${pkmn.name}<br>
+        <strong>레벨:</strong> Lv.${playerData.Lv}<br>
+        <strong>EXP:</strong> ${Math.floor(playerData.EXP)} / ${Math.floor(rexp)}
+        <div class="exp-bar-bg"><div class="exp-bar-fill" style="width: ${expPercent}%;"></div></div>
+        <hr style="border-color:#444; margin:10px 0;">
+        <strong>기본 스탯:</strong><br>
+        HP:${pkmn.base.HP} | Atk:${pkmn.base.Attack} | SpA:${pkmn.base.SpAtk}<br>
+        Def:${pkmn.base.Defense} | SpD:${pkmn.base.SpDef} | Spd:${pkmn.base.Speed}
+      `;
+
+      const storyList = document.getElementById('story-list');
+      storyList.innerHTML = '';
+      DATA_ENEMY.forEach(stage => {
+        const item = document.createElement('div');
+        item.className = 'stage-item';
+        item.innerHTML = `
+          <div>
+            <div class="stage-title">${stage.name} (Lv.${stage.Lv})</div>
+            <div class="stage-reward">승리 시 EXP +${stage.rewardEXP}</div>
+          </div>
+          <button class="btn-sub" style="background:#89b4fa; color:#111; border:none; font-weight:bold;" onclick="prepareBattle('${stage.id}')">전투 시작</button>
+        `;
+        storyList.appendChild(item);
+      });
+
+      let currentAp = playerData.equipped.reduce((sum, id) => sum + (SKILLS_DB[id]?.ap || 0), 0);
+      document.getElementById('ap-text').innerText = `${currentAp} / ${playerData.maxAp} AP`;
+      document.getElementById('ap-bar').style.width = Math.min(100, (currentAp / playerData.maxAp) * 100) + '%';
+      document.getElementById('ap-bar').style.backgroundColor = currentAp > playerData.maxAp ? '#f38ba8' : 'var(--ap-color)';
+
+      const grid = document.getElementById('unlocked-skill-grid');
+      grid.innerHTML = '';
+      playerData.unlockedSkills.forEach(id => {
+        const skill = SKILLS_DB[id];
+        if(skill.type === '강화 액티브' || skill.ap === 0 && skill.chance !== 100 && id !== 'tackle' && id !== 'nitro_charge' && !skill.desc) return; // Hide internal
+        const isEquipped = playerData.equipped.includes(id);
+        const card = document.createElement('div');
+        card.className = `skill-card ${isEquipped ? 'equipped' : ''}`;
+        let typeText = skill.type === 'passive' ? '패시브' : (skill.type === 'basic' ? '기본' : '액티브');
+        card.innerHTML = `<div class="skill-name">${skill.name} <span style="font-size:10px; color:#a6adc8;">[${typeText}]</span></div>
+                          <div class="skill-ap">소모 AP: ${skill.ap}</div>
+                          <div class="skill-desc">${skill.desc}</div>`;
+        card.onclick = () => isEquipped ? unequipSkill(id) : equipSkill(id);
+        grid.appendChild(card);
+      });
+
+      const slotList = document.getElementById('equipped-slot-list');
+      slotList.innerHTML = '';
+      if (playerData.equipped.length === 0) slotList.innerHTML = '<div class="slot-item" style="color:#777; justify-content:center;">장착된 능력이 없습니다.</div>';
+      else {
+        playerData.equipped.forEach(id => {
+          const item = document.createElement('div');
+          item.className = 'slot-item filled';
+          item.innerHTML = `<div><strong>${SKILLS_DB[id].name}</strong> <span style="color:var(--ap-color); font-size:12px;">(${SKILLS_DB[id].ap} AP)</span></div>
+                            <button class="btn-remove" onclick="unequipSkill('${id}')">해제</button>`;
+          slotList.appendChild(item);
+        });
+      }
+    }
+
+    function equipSkill(id) {
+      if (playerData.equipped.includes(id)) return;
+      let currentAp = playerData.equipped.reduce((sum, sid) => sum + (SKILLS_DB[sid]?.ap || 0), 0);
+      if (currentAp + SKILLS_DB[id].ap > playerData.maxAp) return alert(`❌ AP 상한 초과!`);
+      playerData.equipped.push(id); updateLobbyUI();
+    }
+    function unequipSkill(id) {
+      playerData.equipped = playerData.equipped.filter(eid => eid !== id); updateLobbyUI();
+    }
+
+    function buildCombatEntity(isPlayer, stageData = null) {
+      let entity = { id: isPlayer ? 'player' : 'boss', buffs: {}, limits: {} };
+      if (isPlayer) {
+        let pkmn = DATA_POKEMON[playerData.pokemon];
+        entity.name = "플레이어(" + pkmn.name + ")"; entity.spriteName = pkmn.name;
+        entity.Lv = Math.max(1, playerData.Lv);
+        entity.base = JSON.parse(JSON.stringify(pkmn.base));
+        entity.p_stats = JSON.parse(JSON.stringify(pkmn.p_stats));
+        entity.inherent = JSON.parse(JSON.stringify(pkmn.inherent));
+        entity.combatDeck = [...playerData.equipped];
+      } else {
+        let pkmn = DATA_POKEMON[stageData.enemySpecies];
+        entity.name = "적 " + stageData.name; entity.spriteName = pkmn.name;
+        entity.Lv = Math.max(1, stageData.Lv);
+        entity.base = JSON.parse(JSON.stringify(pkmn.base));
+        entity.p_stats = {
+          pHP: pkmn.p_stats.pHP + stageData.add_p.pHP, pPA: pkmn.p_stats.pPA + stageData.add_p.pPA,
+          pMA: pkmn.p_stats.pMA + stageData.add_p.pMA, pPD: pkmn.p_stats.pPD + stageData.add_p.pPD,
+          pMD: pkmn.p_stats.pMD + stageData.add_p.pMD, pAR: pkmn.p_stats.pAR + stageData.add_p.pAR
+        };
+        entity.inherent = {
+          CT: pkmn.inherent.CT + stageData.add_i.CT, CD: pkmn.inherent.CD + stageData.add_i.CD,
+          AV: pkmn.inherent.AV + stageData.add_i.AV, EXPR: pkmn.inherent.EXPR
+        };
+        entity.combatDeck = [...stageData.skills];
+      }
+      return entity;
+    }
+
+    function calculateEntityStats(e) {
+      e.combatDeck.forEach(id => {
+        let skill = SKILLS_DB[id];
+        if (skill && skill.type === 'passive' && skill.apply) skill.apply(e);
+      });
+
+      if (e.combatDeck.includes('quick_attack') && e.combatDeck.includes('extreme_speed')) {
+        e.combatDeck = e.combatDeck.filter(id => id !== 'quick_attack' && id !== 'extreme_speed'); e.combatDeck.push('enhanced_extreme_speed');
+      }
+      if (e.combatDeck.includes('hyper_beam') && e.combatDeck.includes('giga_impact')) {
+        e.combatDeck = e.combatDeck.filter(id => id !== 'hyper_beam' && id !== 'giga_impact'); e.combatDeck.push('burst_stream');
+      }
+
+      let Lv = e.Lv; let b = e.base; let p = e.p_stats;
+      let atk = Math.max(1, b.Attack); let spa = Math.max(1, b.SpAtk);
+      let def = Math.max(1, b.Defense); let spd = Math.max(1, b.SpDef);
+      let hp = Math.max(1, b.HP); let speed = Math.max(1, b.Speed);
+
+      e.HR = 1 + p.pHP / 100;
+      e.PR = h(120, (1 + Lv/100) * atk) + p.pPA / 100;
+      e.MR = h(120, (1 + Lv/100) * spa) + p.pMA / 100;
+      e.PD = f(100, 53, (1 + Lv/100) * def) + p.pPD;
+      e.MD = f(100, 53, (1 + Lv/100) * spd) + p.pMD;
+      e.AR = 1 - p.pAR / 100;
+
+      e.MHP = Math.max(1, Math.floor((100 + Lv) * f(100, 100, (1 + Lv/100) * hp) * e.HR));
+      e.NHP = e.MHP;
+      
+      e.PA = k_fn(atk) * e.PR;
+      e.MA = k_fn(spa) * e.MR;
+      e.DLY = Math.max(50, g((1 + Lv/100) * speed) * e.AR); 
+
+      e.CT = e.inherent.CT; e.CD = e.inherent.CD; e.AV = e.inherent.AV; e.EXPR = e.inherent.EXPR;
+    }
+
+    function prepareBattle(stageId) {
+      let currentAp = playerData.equipped.reduce((sum, id) => sum + (SKILLS_DB[id]?.ap || 0), 0);
+      if (currentAp > playerData.maxAp) return alert("AP 상한 초과 상태로 전투할 수 없습니다.");
+
+      const stage = DATA_ENEMY.find(s => s.id === stageId);
+      selectedRewardEXP = stage.rewardEXP;
+
+      document.getElementById('lobby-screen').classList.remove('active-view');
+      document.getElementById('battle-screen').classList.add('active-view');
+      document.getElementById('btn-return').disabled = true;
+      document.getElementById('log-box').innerHTML = ""; logBuffer = [];
+
+      combatPlayer = buildCombatEntity(true);
+      combatBoss = buildCombatEntity(false, stage);
+
+      calculateEntityStats(combatPlayer);
+      calculateEntityStats(combatBoss);
+
+      document.getElementById('p-name').innerText = combatPlayer.name;
+      document.getElementById('b-name').innerText = combatBoss.name;
+      
+      loadSprite('battle-p-img', combatPlayer.spriteName);
+      loadSprite('battle-b-img', combatBoss.spriteName);
+
+      isBattleActive = true;
+      bufferLog(`<span class="log-sys">=== [${stage.name}] 전투 개시 ===</span>`);
+      
+      if (document.getElementById('skip-battle-chk').checked) runSimulationLoop();
+      else {
+        combatPlayer.nextActionTime = combatPlayer.DLY;
+        combatBoss.nextActionTime = combatBoss.DLY;
+        runRealtimeLoop();
+      }
+    }
+
+    function executeTurn(attacker, defender, currentTime) {
+      if (!isBattleActive) return;
+      try {
+        let logPrefix = attacker.id === 'player' ? `[${attacker.name}]` : `<span style="color:#f38ba8">[${attacker.name}]</span>`;
+        attacker.nextDelayOverride = undefined;
+
+        let actives = attacker.combatDeck.filter(id => {
+          let s = SKILLS_DB[id];
+          return s && s.type === 'active' && s.chance > 0 && (!s.limit || (attacker.limits[id] || 0) < s.limit) && (!s.condition || s.condition(attacker));
+        });
+        actives.sort(() => Math.random() - 0.5);
+
+        let activated = null;
+        for (let id of actives) {
+          if (Math.random() * 100 < SKILLS_DB[id].chance) {
+            activated = SKILLS_DB[id];
+            attacker.limits[id] = (attacker.limits[id] || 0) + 1;
+            break;
+          }
+        }
+
+        if (activated) {
+          bufferLog(`${logPrefix} ${activated.execute(attacker, defender)}`);
+        } else {
+          let basics = attacker.combatDeck.filter(id => SKILLS_DB[id] && SKILLS_DB[id].type === 'basic');
+          if (basics.length > 0) {
+            basics.sort(() => Math.random() - 0.5);
+            bufferLog(`${logPrefix} ${SKILLS_DB[basics[0]].execute(attacker, defender)}`);
+          } else {
+            let res = Gimmick.attack(attacker, defender, (attacker.PA * 0.5), 'Pdmg');
+            let recoil = Gimmick.recoilMHP(attacker, 0.5);
+            bufferLog(`${logPrefix} 발버둥! ${res.msg} [반동피해 <span class="log-dmg">${recoil}</span>]`);
+          }
+        }
+
+        let nextDelay = attacker.nextDelayOverride !== undefined ? attacker.nextDelayOverride : attacker.DLY;
+        attacker.nextActionTime = currentTime + Math.max(50, nextDelay);
+
+        if (attacker.id === 'player') {
+          if (combatBoss.NHP <= 0) triggerBattleEnd(true);
+        } else {
+          if (combatPlayer.NHP <= 0) triggerBattleEnd(false);
+        }
+      } catch (e) {
+        console.error(e); bufferLog(`<span class="log-dmg">오류 발생: 턴 스킵됨</span>`);
+      }
+    }
+
+    function runSimulationLoop() {
+      let currentTime = 0; const MAX_TIME = 30000;
+      combatPlayer.nextActionTime = combatPlayer.DLY; combatBoss.nextActionTime = combatBoss.DLY;
+      
+      let safetyCounter = 0;
+      while (isBattleActive && currentTime <= MAX_TIME && safetyCounter < 2000) {
+        safetyCounter++;
+        let minTime = Math.min(combatPlayer.nextActionTime, combatBoss.nextActionTime);
+        currentTime = minTime;
+        if (currentTime > MAX_TIME) { triggerBattleEnd(false, true); break; }
+        if (combatPlayer.nextActionTime <= combatBoss.nextActionTime) executeTurn(combatPlayer, combatBoss, currentTime);
+        else executeTurn(combatBoss, combatPlayer, currentTime);
+      }
+      updateBattleUI(); flushLogs();
+    }
+
+    function runRealtimeLoop() {
+      let currentTime = 0; const MAX_TIME = 30000;
+      function tick() {
+        if (!isBattleActive) return;
+        let minTime = Math.min(combatPlayer.nextActionTime, combatBoss.nextActionTime);
+        currentTime = minTime;
+        if (currentTime > MAX_TIME) { triggerBattleEnd(false, true); updateBattleUI(); flushLogs(); return; }
+        if (combatPlayer.nextActionTime <= combatBoss.nextActionTime) executeTurn(combatPlayer, combatBoss, currentTime);
+        else executeTurn(combatBoss, combatPlayer, currentTime);
+
+        updateBattleUI(); flushLogs();
+        if (isBattleActive) setTimeout(tick, 50); 
+      }
+      tick();
+    }
+
+    function bufferLog(msg) { logBuffer.push(`<div>${msg}</div>`); }
+    function flushLogs() {
+      if (logBuffer.length === 0) return;
+      const box = document.getElementById('log-box');
+      box.insertAdjacentHTML('beforeend', logBuffer.join(''));
+      logBuffer = []; box.scrollTop = box.scrollHeight;
+    }
+
+    function triggerBattleEnd(isWin, isTimeout = false) {
+      isBattleActive = false; bufferLog(`<hr>`);
+      if (isWin) {
+        bufferLog(`<span class="log-sys" style="font-size:16px;">🏆 전투 승리!! (EXP +${selectedRewardEXP})</span>`);
+        grantEXP(selectedRewardEXP);
+      } else {
+        if(isTimeout) bufferLog(`<span class="log-dmg" style="font-size:16px;">⏳ 전투시간 초과(30초)... 패배.</span>`);
+        else bufferLog(`<span class="log-dmg" style="font-size:16px;">💀 플레이어 사망... 전투 패배.</span>`);
+      }
+      document.getElementById('btn-return').disabled = false;
+    }
+
+    function grantEXP(amount) {
+      playerData.EXP += amount;
+      let pkmn = DATA_POKEMON[playerData.pokemon];
+      let rexp = getREXP(playerData.Lv, pkmn.inherent.EXPR);
+      while (playerData.EXP >= rexp) {
+        playerData.EXP -= rexp; playerData.Lv += 1;
+        bufferLog(`<span class="log-heal" style="font-size:15px;">🎉 [레벨 업!] Lv.${playerData.Lv} 달성!</span>`);
+        rexp = getREXP(playerData.Lv, pkmn.inherent.EXPR);
+      }
+      saveDataLocal(); 
+    }
+
+    function updateBattleUI() {
+      if(!combatPlayer || !combatBoss) return;
+      document.getElementById('p-hp-bar').style.width = Math.max(0, (combatPlayer.NHP / combatPlayer.MHP) * 100) + '%';
+      document.getElementById('b-hp-bar').style.width = Math.max(0, (combatBoss.NHP / combatBoss.MHP) * 100) + '%';
+      
+      const renderStats = (c) => `
+        <span style="color:#a6e3a1; font-weight:bold;">Lv.${c.Lv} | HP: ${Math.floor(c.NHP)} / ${c.MHP}</span><br>
+        <span class="stat-title">파생 계수</span> PA: ${c.PA.toFixed(1)} | MA: ${c.MA.toFixed(1)} | PD: ${c.PD.toFixed(1)} | MD: ${c.MD.toFixed(1)}<br>
+        <span class="stat-title">고유 능력</span> DLY: ${c.DLY.toFixed(1)}ms | CT: ${c.CT.toFixed(1)}% | AV: ${c.AV.toFixed(1)}%
+      `;
+      document.getElementById('p-stats').innerHTML = renderStats(combatPlayer);
+      document.getElementById('b-stats').innerHTML = renderStats(combatBoss);
+    }
+
+    function returnToLobby() {
+      document.getElementById('battle-screen').classList.remove('active-view');
+      document.getElementById('lobby-screen').classList.add('active-view');
+      updateLobbyUI(); 
+    }
+
+    window.onload = () => { loadDataLocal(); updateLobbyUI(); };
+  </script>
+</body>
+</html>
