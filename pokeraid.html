@@ -416,7 +416,8 @@
       'keen_eye': { name: "날카로운눈", type: 'passive', ap: 3 },
       'heatproof': { name: "내열", type: 'passive', ap: 4 },
       'levitate': { name: "부유", type: 'passive', ap: 8 },
-      'tackle': { name: "몸통박치기", type: 'basic', ap: 1 }
+      'tackle': { name: "몸통박치기", type: 'basic', ap: 1 },
+      'ultimate_tackle': { name: "몸박통치기", type: 'basic', ap: 50 }
     };
 
     // ==========================================
@@ -629,6 +630,16 @@
         execute: (c, t) => {
           let res = Gimmick.attack(c, t, c.PA * 1, 'Pdmg');
           return `몸통박치기! ${res.msg}`;
+        }
+      },
+      'ultimate_tackle': {
+        desc: "PA*0.1 Pdmg, 상대 pPD-1, AV-1",
+        execute: (c, t) => {
+          let res = Gimmick.attack(c, t, c.PA * 0.1, 'Pdmg');
+          t.p_stats.pPD -= 1;
+          t.AV -= 1;
+          t.PD = Math.max(1, t.PD - 1); // 실시간 스탯 반영 보정
+          return `❄️몸박통치기! ${res.msg} (적 방어/회피 감소)`;
         }
       }
     };
